@@ -16,12 +16,11 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Download LFS assets from `pre-release` tag
+    - name: Download assets with wget
       run: |
-        git fetch --tags
-        mkdir -p app/src/main/assets/
-        git show rootfs:app/src/main/assets/container_pattern.tzst > app/src/main/assets/container_pattern.tzst
-        git show rootfs:app/src/main/assets/imagefs.txz > app/src/main/assets/imagefs.txz
+        mkdir -p app/src/main/assets
+        wget -O app/src/main/assets/container_pattern.tzst https://github.com/duckyduckG/winlator/releases/download/rootfs/container_pattern.tzst
+        wget -O app/src/main/assets/imagefs.txz https://github.com/duckyduckG/winlator/releases/download/rootfs/imagefs.txz
 
     - name: set up JDK 17
       uses: actions/setup-java@v4
