@@ -16,6 +16,13 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Download LFS assets from `pre-release` tag
+      run: |
+        git fetch --tags
+        mkdir -p app/src/main/assets/
+        git show pre-release:app/src/main/assets/container_pattern.tzst > app/src/main/assets/container_pattern.tzst
+        git show pre-release:app/src/main/assets/imagefs.txz > app/src/main/assets/imagefs.txz
+
     - name: set up JDK 17
       uses: actions/setup-java@v4
       with:
