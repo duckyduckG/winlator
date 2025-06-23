@@ -37,60 +37,60 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
     private String[] bindingPaths;
     private EnvVars envVars;
     private WineInfo wineInfo;
-    private String box86Preset = Box86_64Preset.COMPATIBILITY;
     private String box64Preset = Box86_64Preset.COMPATIBILITY;
     private Callback<Integer> terminationCallback;
     private static final Object lock = new Object();
     private boolean wow64Mode = true;
-    private Container container;
     private final ContentsManager contentsManager;
     private final ContentProfile wineProfile;
-
+    private Container container;
     private final Shortcut shortcut;
     private String box64Version;
+    private String fexcoreVersion;
 
     public void setWineInfo(WineInfo wineInfo) {
         this.wineInfo = wineInfo;
     }
-
     public WineInfo getWineInfo() {
         return this.wineInfo;
     }
 
+    public Container getContainer() { return this.container; }
+    public void setContainer(Container container) { this.container = container; }
+
     private void extractBox86_64Files() {
         ImageFs imageFs = environment.getImageFs();
         Context context = environment.getContext();
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
 
         // Fallback to default if the shared preference is not set or is empty
-        box64Version = preferences.getString("box64_version", DefaultVersion.BOX64);
-        if (box64Version == null || box64Version.isEmpty()) {
-            box64Version = DefaultVersion.BOX64; // Assign the default version directly
-            Log.w("BionicProgramLauncherComponent", "box64Version was null or empty, using default: " + box64Version);
+        box64Version = container.getBox64Version();
+        String oldBox64Version = container.getOldBox64Version();
+
+        if (shortcut != null) {
+            box64Version = shortcut.getExtra("box64Version", shortcut.container.getBox64Version());
+            oldBox64Version = shortcut.getExtra("oldbox64Version", shortcut.container.getOldBox64Version());
         }
 
-        // If a shortcut is provided, it overrides the SharedPreferences value
-        if (shortcut != null && shortcut.getExtra("box64Version") != null) {
-            String shortcutVersion = shortcut.getExtra("box64Version");
-            if (shortcutVersion != null && !shortcutVersion.isEmpty()) {
-                box64Version = shortcutVersion;
-            } else {
-                Log.w("BionicProgramLauncherComponent", "Shortcut box64Version was empty, keeping SharedPreferences/default value: " + box64Version);
-            }
-        }
+        Log.d("BionicProgramLauncherComponent", "oldBox64Version: " + oldBox64Version);
+        Log.d("BionicProgramLauncherComponent", "box64Version: " + box64Version);
 
-        Log.d("BionicProgramLauncherComponent", "box64Version in use: " + box64Version);
 
-        String currentBox64Version = preferences.getString("current_box64_version", "");
         File rootDir = imageFs.getRootDir();
 
-        if (!box64Version.equals(currentBox64Version)) {
+        if (!box64Version.equals(oldBox64Version)) {
             ContentProfile profile = contentsManager.getProfileByEntryName("box64-" + box64Version);
             if (profile != null)
                 contentsManager.applyContent(profile);
-            else {
+            else
                 TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, context, "box86_64/box64-" + box64Version + ".tzst", rootDir);
-                preferences.edit().putString("current_box64_version", box64Version).apply();
+
+            if(shortcut != null) {
+                shortcut.putExtra("oldbox64Version", box64Version);
+                shortcut.saveData();
+            }
+            else {
+                container.setOldBox64Version(box64Version);
+                container.saveData();
             }
         }
 
@@ -101,11 +101,59 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         }
     }
 
-
-    private void extractEmulatorsDlls() {
+    private void extractEmulatorsDlls() {;
+        Context context = environment.getContext();
         File rootDir = environment.getImageFs().getRootDir();
         File system32dir = new File(rootDir + "/home/xuser/.wine/drive_c/windows/system32");
-        TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, environment.getContext(), "emulators_dlls.tzst", system32dir);
+
+        String oldwowbox64Version = container.getOldBox64Version();
+        String wowbox64Version = container.getBox64Version();
+        String oldfexcoreVersion = container.getOldFEXCoreVersion();
+        String fexcoreVersion = container.getFEXCoreVersion();
+
+        if (shortcut != null) {
+            oldwowbox64Version = shortcut.getExtra("oldbox64Version", shortcut.container.getOldBox64Version());
+            wowbox64Version = shortcut.getExtra("box64Version", shortcut.container.getBox64Version());
+            oldfexcoreVersion = shortcut.getExtra("oldfexcoreVersion", shortcut.container.getOldFEXCoreVersion());
+            fexcoreVersion = shortcut.getExtra("fexcoreVersion", shortcut.container.getFEXCoreVersion());
+        }
+
+        Log.d("BionicProgramLauncherComponent", "oldbox64Version in use: " + oldwowbox64Version);
+        Log.d("BionicProgramLauncherComponent", "box64Version in use: " + wowbox64Version);
+        Log.d("BionicProgramLauncherComponent", "oldfexcoreVersion in use: " + oldfexcoreVersion);
+        Log.d("BionicProgramLauncherComponent", "fexcoreVersion in use: " + fexcoreVersion);
+
+        if (!wowbox64Version.equals(oldwowbox64Version)) {
+            ContentProfile profile = contentsManager.getProfileByEntryName("wowbox64-" + wowbox64Version);
+            if (profile != null)
+                contentsManager.applyContent(profile);
+            else
+                TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, environment.getContext(), "wowbox64/wowbox64-" + wowbox64Version + ".tzst", system32dir);
+            if (shortcut != null) {
+                shortcut.putExtra("oldbox64Version", wowbox64Version);
+                shortcut.saveData();
+            }
+            else {
+                container.setOldBox64Version(wowbox64Version);
+                container.saveData();
+            }
+        }
+
+        if (!fexcoreVersion.equals(oldfexcoreVersion)) {
+            ContentProfile profile = contentsManager.getProfileByEntryName("fexcore-" + fexcoreVersion);
+            if (profile != null)
+                contentsManager.applyContent(profile);
+            else
+                TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, environment.getContext(), "fexcore/fexcore-" + fexcoreVersion + ".tzst", system32dir);
+            if(shortcut != null) {
+                shortcut.putExtra("oldfexcoreVersion", fexcoreVersion);
+                shortcut.saveData();
+            }
+            else {
+                container.setOldFEXCoreVersion(fexcoreVersion);
+                container.saveData();
+            }
+        }
     }
 
     public BionicProgramLauncherComponent(ContentsManager contentsManager, ContentProfile wineProfile, Shortcut shortcut) {
@@ -206,14 +254,6 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         this.envVars = envVars;
     }
 
-    public String getBox86Preset() {
-        return box86Preset;
-    }
-
-    public void setBox86Preset(String box86Preset) {
-        this.box86Preset = box86Preset;
-    }
-
     public String getBox64Preset() {
         return box64Preset;
     }
@@ -232,10 +272,6 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
 
         EnvVars envVars = new EnvVars();
 
-        // Add the Box86 and Box64 environment variables depending on the mode
-        if (!wow64Mode) {
-            addBox86EnvVars(envVars, enableBox86_64Logs);
-        }
         addBox64EnvVars(envVars, enableBox86_64Logs);
 
         if (envVars.get("BOX64_MMAP32").equals("1") && !wineInfo.isArm64EC())
@@ -250,7 +286,7 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         envVars.put("XDG_CONFIG_DIRS", rootDir.getPath() + "/usr/etc/xdg");
         envVars.put("GST_PLUGIN_PATH", rootDir.getPath() + "/usr/lib/gstreamer-1.0");
         envVars.put("FONTCONFIG_PATH", rootDir.getPath() + "/usr/etc/fonts");
-        envVars.put("VK_LAYER_PATH", rootDir.getPath() + "/usr/share/vulkan/implicit_layer.d");
+        envVars.put("VK_LAYER_PATH", rootDir.getPath() + "/usr/share/vulkan/implicit_layer.d" + ":" + rootDir.getPath() + "/usr/share/vulkan/explicit_layer.d");
         envVars.put("WINE_NO_DUPLICATE_EXPLORER", "1");
         envVars.put("PREFIX", rootDir.getPath() + "/usr");
         envVars.put("DISPLAY", ":0");
@@ -310,21 +346,6 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
                     terminationCallback.call(status);
             }
         });
-    }
-
-
-    private void addBox86EnvVars(EnvVars envVars, boolean enableLogs) {
-        envVars.put("BOX86_NOBANNER", ProcessHelper.PRINT_DEBUG && enableLogs ? "0" : "1");
-        envVars.put("BOX86_DYNAREC", "1");
-
-        if (enableLogs) {
-            envVars.put("BOX86_LOG", "1");
-            envVars.put("BOX86_DYNAREC_MISSING", "1");
-        }
-
-        envVars.putAll(Box86_64PresetManager.getEnvVars("box86", environment.getContext(), box86Preset));
-        envVars.put("BOX86_X11GLX", "1");
-        envVars.put("BOX86_NORCFILES", "1");
     }
 
     private void addBox64EnvVars(EnvVars envVars, boolean enableLogs) {

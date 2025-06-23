@@ -59,7 +59,6 @@ public class Container {
     private String cpuList;
     private String cpuListWoW64;
     private String desktopTheme = WineThemeManager.DEFAULT_DESKTOP_THEME;
-    private String box86Preset = Box86_64Preset.COMPATIBILITY;
     private String box64Preset = Box86_64Preset.COMPATIBILITY;
     private File rootDir;
     private JSONObject extraData;
@@ -70,13 +69,26 @@ public class Container {
     private int primaryController = 1;
     private String controllerMapping = new String(new char[XrControllerMapping.values().length]);
     private String blacklistedExtensions;
-
+    private String oldfexcoreVersion;
+    private String fexcoreVersion = DefaultVersion.FEXCORE;
+    private String oldbox64Version;
+    private String box64Version = DefaultVersion.BOX64;
     private String wrapperGraphicsDriverVersion = "System";
     private String oldWrapperGraphicsDriverVersion = "System";
 
     private String emulator;
 
     private ContainerManager containerManager;
+
+    public String getFEXCoreVersion() { return this.fexcoreVersion; }
+    public void setFEXCoreVersion(String version) { this.fexcoreVersion = version; }
+    public String getOldFEXCoreVersion() { return this.oldfexcoreVersion; }
+    public void setOldFEXCoreVersion(String version) { this.oldfexcoreVersion = version; }
+
+    public String getBox64Version() { return box64Version; }
+    public void setBox64Version(String version) { this.box64Version = version; }
+    public String getOldBox64Version() { return this.oldbox64Version; }
+    public void setOldBox64Version(String version) { this.oldbox64Version = version; }
     
     public String getWrapperGraphicsDriverVersion() {
         return wrapperGraphicsDriverVersion;
@@ -274,14 +286,6 @@ public class Container {
         this.cpuListWoW64 = cpuListWoW64 != null && !cpuListWoW64.isEmpty() ? cpuListWoW64 : null;
     }
 
-    public String getBox86Preset() {
-        return box86Preset;
-    }
-
-    public void setBox86Preset(String box86Preset) {
-        this.box86Preset = box86Preset;
-    }
-
     public String getBox64Preset() {
         return box64Preset;
     }
@@ -431,8 +435,11 @@ public class Container {
             data.put("inputType", inputType);
             data.put("wow64Mode", wow64Mode);
             data.put("startupSelection", startupSelection);
-            data.put("box86Preset", box86Preset);
+            data.put("oldbox64Version", oldbox64Version);
+            data.put("box64Version", box64Version);
             data.put("box64Preset", box64Preset);
+            data.put("oldfexcoreVersion", oldfexcoreVersion);
+            data.put("fexcoreVersion", fexcoreVersion);
             data.put("desktopTheme", desktopTheme);
             data.put("extraData", extraData);
             data.put("rcfileId", rcfileId);
@@ -523,11 +530,20 @@ public class Container {
                 case "wineVersion" :
                     setWineVersion(data.getString(key));
                     break;
-                case "box86Preset" :
-                    setBox86Preset(data.getString(key));
+                case "oldbox64Version":
+                    setOldBox64Version(data.getString(key));
+                    break;
+                case "box64Version":
+                    setBox64Version(data.getString(key));
                     break;
                 case "box64Preset" :
                     setBox64Preset(data.getString(key));
+                    break;
+                case "oldfexcoreVersion":
+                    setOldFEXCoreVersion(data.getString(key));
+                    break;
+                case "fexcoreVersion":
+                    setFEXCoreVersion(data.getString(key));
                     break;
                 case "audioDriver" :
                     setAudioDriver(data.getString(key));

@@ -221,12 +221,15 @@ public class ContainerDetailFragment extends Fragment {
         Spinner SDInputType = view.findViewById(R.id.SDInputType);
         SDInputType.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
 
-        Spinner sBox86Preset = view.findViewById(R.id.SBox86Preset);
-        sBox86Preset.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
-
         Spinner sBox64Preset = view.findViewById(R.id.SBox64Preset);
         sBox64Preset.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
-        
+
+        Spinner sBox64Version = view.findViewById(R.id.SBox64Version);
+        sBox64Version.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
+
+        Spinner sFEXCoreVersion = view.findViewById(R.id.SFEXCoreVersion);
+        sFEXCoreVersion.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
+
         Spinner sFEXCoreTSOPreset = view.findViewById(R.id.SFEXCoreTSOPreset);
         sFEXCoreTSOPreset.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
         
@@ -364,7 +367,9 @@ public class ContainerDetailFragment extends Fragment {
             etName.setText(getString(R.string.container) + "-" + manager.getNextContainerId());
         }
 
-        loadWineVersionSpinner(view, sWineVersion);
+        final Spinner sBox64Version = view.findViewById(R.id.SBox64Version);
+
+        loadWineVersionSpinner(view, sWineVersion, sBox64Version);
 
         loadScreenSizeSpinner(view, isEditMode() ? container.getScreenSize() : Container.DEFAULT_SCREEN_SIZE);
 
@@ -486,21 +491,17 @@ public class ContainerDetailFragment extends Fragment {
         byte previousStartupSelection = isEditMode() ? container.getStartupSelection() : -1;
         sStartupSelection.setSelection(previousStartupSelection != -1 ? previousStartupSelection : Container.STARTUP_SELECTION_AGGRESSIVE);
 
-        final Spinner sBox86Preset = view.findViewById(R.id.SBox86Preset);
-
-
-        Box86_64PresetManager.loadSpinner("box86", sBox86Preset, isEditMode() ? container.getBox86Preset() : preferences.getString("box86_preset", Box86_64Preset.COMPATIBILITY));
-
-
         final Spinner sBox64Preset = view.findViewById(R.id.SBox64Preset);
-
         Box86_64PresetManager.loadSpinner("box64", sBox64Preset, isEditMode() ? container.getBox64Preset() : preferences.getString("box64_preset", Box86_64Preset.COMPATIBILITY));
-        
+
+        final Spinner sFEXCoreVersion = view.findViewById(R.id.SFEXCoreVersion);
+        FEXCoreManager.loadFEXCoreVersion(context, contentsManager, sFEXCoreVersion, container);
+
         final Spinner sFEXCoreTSOPreset = view.findViewById(R.id.SFEXCoreTSOPreset);
         final Spinner sFEXCoreMultiBlock = view.findViewById(R.id.SFEXCoreMultiblock);
         final Spinner sFEXCoreX87ReducedPrecision = view.findViewById(R.id.SFEXCoreX87ReducedPrecision);
         
-        FEXCoreManager.loadFEXCoreSpinners(context, container, sFEXCoreTSOPreset, sFEXCoreMultiBlock, sFEXCoreX87ReducedPrecision);
+        FEXCoreManager.loadFEXCoreSettings(context, container, sFEXCoreTSOPreset, sFEXCoreMultiBlock, sFEXCoreX87ReducedPrecision);
 
         String selectedDriver = sGraphicsDriver.getSelectedItem().toString();
         List<String> sGraphicsItemsList = new ArrayList<>(Arrays.asList(context.getResources().getStringArray(R.array.graphics_driver_entries)));
@@ -570,11 +571,11 @@ public class ContainerDetailFragment extends Fragment {
                 String cpuListWoW64 = cpuListViewWoW64.getCheckedCPUListAsString();
                 boolean wow64Mode = cbWoW64Mode.isChecked();
                 byte startupSelection = (byte) sStartupSelection.getSelectedItemPosition();
-                String box86Preset = Box86_64PresetManager.getSpinnerSelectedId(sBox86Preset);
+                String box64Version = sBox64Version.getSelectedItem().toString();
                 String box64Preset = Box86_64PresetManager.getSpinnerSelectedId(sBox64Preset);
                 String desktopTheme = getDesktopTheme(view);
                 int rcfileId = rcfileIds[0];
-
+                String fexcoreVersion = sFEXCoreVersion.getSelectedItem().toString();
                 // Capture missing properties
                 String midiSoundFont = sMIDISoundFont.getSelectedItemPosition() == 0 ? "" : sMIDISoundFont.getSelectedItem().toString();
                 String lc_all = etLC_ALL.getText().toString();
@@ -627,8 +628,9 @@ public class ContainerDetailFragment extends Fragment {
                     container.setInputType(finalInputType);
                     container.setWoW64Mode(wow64Mode);
                     container.setStartupSelection(startupSelection);
-                    container.setBox86Preset(box86Preset);
+                    container.setBox64Version(box64Version);
                     container.setBox64Preset(box64Preset);
+                    container.setFEXCoreVersion(fexcoreVersion);
                     container.setDesktopTheme(desktopTheme);
                     container.setRcfileId(rcfileId);
                     container.setMidiSoundFont(midiSoundFont);
@@ -663,8 +665,9 @@ public class ContainerDetailFragment extends Fragment {
                     data.put("inputType", finalInputType);
                     data.put("wow64Mode", wow64Mode);
                     data.put("startupSelection", startupSelection);
-                    data.put("box86Preset", box86Preset);
+                    data.put("box64Version", box64Version);
                     data.put("box64Preset", box64Preset);
+                    data.put("fexcoreVersion", fexcoreVersion);
                     data.put("desktopTheme", desktopTheme);
                     data.put("rcfileId", rcfileId);
                     data.put("wineVersion", sWineVersion.getSelectedItem().toString());
@@ -1130,7 +1133,7 @@ public class ContainerDetailFragment extends Fragment {
 
     }
 
-    private void loadWineVersionSpinner(final View view, Spinner sWineVersion) {
+    private void loadWineVersionSpinner(final View view, Spinner sWineVersion, Spinner sBox64Version) {
         final Context context = getContext();
         sWineVersion.setEnabled(!isEditMode());
 //
@@ -1151,7 +1154,9 @@ public class ContainerDetailFragment extends Fragment {
                     fexcoreFL.setVisibility(View.GONE);
                     sEmulator.setEnabled(false);
                     sEmulator.setSelection(1);
+
                 }
+                loadBox64VersionSpinner(context, container, contentsManager, sBox64Version, wineInfo.isArm64EC());
                 cbWoW64Mode.setEnabled(true); // Always allow user to toggle WoW64 mode
             }
             @Override
@@ -1169,6 +1174,7 @@ public class ContainerDetailFragment extends Fragment {
                     sEmulator.setEnabled(false);
                     sEmulator.setSelection(1);
                 }
+                loadBox64VersionSpinner(context, container, contentsManager, sBox64Version, wineInfo.isArm64EC());
             }
         });
 
@@ -1227,4 +1233,36 @@ public class ContainerDetailFragment extends Fragment {
         spinner.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, itemList));
     }
 
+    public static void loadBox64VersionSpinner(Context context, Container container, ContentsManager manager, Spinner spinner, boolean isArm64EC) {
+        List<String> itemList;
+        if (isArm64EC) {
+            String[] originalItems = context.getResources().getStringArray(R.array.wowbox64_version_entries);
+            itemList = new ArrayList<>(Arrays.asList(originalItems));
+        }
+        else {
+            String[] originalItems = context.getResources().getStringArray(R.array.box64_version_entries);
+            itemList = new ArrayList<>(Arrays.asList(originalItems));
+        }
+        if (!isArm64EC) {
+            for (ContentProfile profile : manager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_BOX64)) {
+                String entryName = ContentsManager.getEntryName(profile);
+                int firstDashIndex = entryName.indexOf('-');
+                itemList.add(entryName.substring(firstDashIndex + 1));
+            }
+        } else {
+            for (ContentProfile profile : manager.getProfiles(ContentProfile.ContentType.CONTENT_TYPE_WOWBOX64)) {
+                String entryName = ContentsManager.getEntryName(profile);
+                int firstDashIndex = entryName.indexOf('-');
+                itemList.add(entryName.substring(firstDashIndex + 1));
+            }
+        }
+        spinner.setAdapter(new ArrayAdapter<>(context, android.R.layout.simple_spinner_dropdown_item, itemList));
+        if (container != null)
+            AppUtils.setSpinnerSelectionFromValue(spinner, container.getBox64Version());
+        else
+            AppUtils.setSpinnerSelectionFromValue(spinner, DefaultVersion.BOX64);
+    }
+
 }
+
+

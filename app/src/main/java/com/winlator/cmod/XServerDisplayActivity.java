@@ -664,7 +664,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                         else if (emulator.toLowerCase().equals("fexcore"))
                             envVars.put("HODLL", "libwow64fex.dll");
                         else
-                            envVars.put("HODLL", "box64cpu.dll");
+                            envVars.put("HODLL", "wowbox64.dll");
                         if (isOpenWithAndroidBrowser)
                             envVars.put("WINE_OPEN_WITH_ANDROID_BROWSER", "1");
                         if (isShareAndroidClipboard) {
@@ -1239,7 +1239,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             if (container.getStartupSelection() == Container.STARTUP_SELECTION_AGGRESSIVE) {
                 winHandler.killProcess("services.exe");
             }
-
+            bionicLauncher.setContainer(this.container);
             bionicLauncher.setWineInfo(this.wineInfo);
             boolean wow64Mode = container.isWoW64Mode();
             // Construct the guest executable command
@@ -1271,11 +1271,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             guestProgramLauncherComponent.setBindingPaths(bindingPaths.toArray(new String[0]));
 
             // Box86/64 presets from container or shortcut
-            guestProgramLauncherComponent.setBox86Preset(
-                    shortcut != null
-                            ? shortcut.getExtra("box86Preset", container.getBox86Preset())
-                            : container.getBox86Preset()
-            );
             guestProgramLauncherComponent.setBox64Preset(
                     shortcut != null
                             ? shortcut.getExtra("box64Preset", container.getBox64Preset())
