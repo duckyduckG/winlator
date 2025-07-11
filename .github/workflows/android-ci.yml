@@ -18,12 +18,15 @@ jobs:
       env:
         GIT_LFS_SKIP_SMUDGE: 1
 
-    - name: Download assets with wget
+    - name: Download LFS assets with wget from dev branch
       run: |
         mkdir -p app/src/main/assets
-        wget -q -O app/src/main/assets/proton-9.0-arm64ec.txz https://github.com/duckyduckG/winlator/releases/download/rootfs-c10dfe6/proton-9.0-arm64ec.txz
-        wget -q -O app/src/main/assets/proton-9.0-x86_64.txz https://github.com/duckyduckG/winlator/releases/download/rootfs-c10dfe6/proton-9.0-x86_64.txz
-        wget -q -O app/src/main/assets/imagefs.txz https://github.com/duckyduckG/winlator/releases/download/rootfs-c10dfe6/imagefs.txz
+        rm -rf app/src/main/assets/proton-9.0-arm64ec.txz
+        rm -rf app/src/main/assets/proton-9.0-x86_64.txz
+        rm -rf app/src/main/assets/imagefs.txz
+        wget -q -O app/src/main/assets/proton-9.0-arm64ec.txz https://github.com/Pipetto-crypto/winlator/raw/refs/heads/dev/app/src/main/assets/proton-9.0-arm64ec.txz
+        wget -q -O app/src/main/assets/proton-9.0-x86_64.txz https://github.com/Pipetto-crypto/winlator/raw/refs/heads/dev/app/src/main/assets/proton-9.0-x86_64.txz
+        wget -q -O app/src/main/assets/imagefs.txz https://github.com/Pipetto-crypto/winlator/raw/refs/heads/dev/app/src/main/assets/imagefs.txz
 
     - name: set up JDK 17
       uses: actions/setup-java@v4
