@@ -1,6 +1,6 @@
 
 
-name: Android CI Bionic
+name: Android CI Bionic DEV
 
 on:
   workflow_dispatch:
