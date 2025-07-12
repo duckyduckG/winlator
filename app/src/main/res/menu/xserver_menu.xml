@@ -22,6 +22,10 @@
             android:icon="@drawable/icon_fullscreen"
             android:id="@+id/main_menu_toggle_fullscreen"
             android:title="@string/toggle_fullscreen" />
+        <item
+            android:icon="@drawable/icon_pause"
+            android:id="@+id/main_menu_pause"
+            android:title="Pause/Resume" />
         <!--
         <item
             android:icon="@drawable/icon_reset"

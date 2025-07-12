@@ -196,6 +196,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     private String lc_all = "";
     PreloaderDialog preloaderDialog = null;
     private Runnable configChangedCallback = null;
+    private boolean isPaused = false;
 
     // Inside the XServerDisplayActivity class
     private SensorManager sensorManager;
@@ -455,8 +456,23 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
             containerManager.activateContainer(container);
 
+            if (shortcutPath != null && !shortcutPath.isEmpty()) {
+                shortcut = new Shortcut(container, new File(shortcutPath));
+            }
+
             // Initialize Win32AppWorkarounds
             win32AppWorkarounds = new Win32AppWorkarounds(this);
+
+            taskAffinityMask = (short) ProcessHelper.getAffinityMask(container.getCPUList(true));
+            taskAffinityMaskWoW64 = (short) ProcessHelper.getAffinityMask(container.getCPUListWoW64(true));
+
+            if (shortcut != null) {
+                taskAffinityMask = (short) ProcessHelper.getAffinityMask(shortcut.getExtra("cpuList", container.getCPUList(true)));
+                taskAffinityMaskWoW64 = (short) ProcessHelper.getAffinityMask(shortcut.getExtra("cpuListWoW64", container.getCPUListWoW64(true)));
+            }
+
+            win32AppWorkarounds.setTaskAffinityMask(taskAffinityMask);
+            win32AppWorkarounds.setTaskAffinityMaskWoW64(taskAffinityMaskWoW64);
 
             // Determine the class name for the startup workarounds
             String wmClass = shortcut != null ? shortcut.getExtra("wmClass", "") : "";
@@ -480,18 +496,12 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 }
             }
 
-            taskAffinityMask = (short) ProcessHelper.getAffinityMask(container.getCPUList(true));
-            taskAffinityMaskWoW64 = (short) ProcessHelper.getAffinityMask(container.getCPUListWoW64(true));
             firstTimeBoot = container.getExtra("appVersion").isEmpty();
 
             String wineVersion = container.getWineVersion();
             wineInfo = WineInfo.fromIdentifier(this, wineVersion);
 
             imageFs.setWinePath(wineInfo.path);
-
-            if (shortcutPath != null && !shortcutPath.isEmpty()) {
-                shortcut = new Shortcut(container, new File(shortcutPath));
-            }
 
             ProcessHelper.removeAllDebugCallbacks();
             if (enableLogs) {
@@ -548,7 +558,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 // Pass the value to WinHandler
                 winHandler.setXInputDisabled(xinputDisabledFromShortcut);
                 Log.d("XServerDisplayActivity", "XInput Disabled from Shortcut: " + xinputDisabledFromShortcut);
-
             }
 
             this.graphicsDriverConfig = GraphicsDriverConfigDialog.parseGraphicsDriverConfig(graphicsDriverConfig);
@@ -979,6 +988,18 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 renderer.toggleFullscreen();
                 drawerLayout.closeDrawers();
                 touchpadView.toggleFullscreen();
+                break;
+            case R.id.main_menu_pause:
+                if (isPaused) {
+                    ProcessHelper.resumeAllWineProcesses();
+                    item.setIcon(R.drawable.icon_pause);
+                }
+                else {
+                    ProcessHelper.pauseAllWineProcesses();
+                    item.setIcon(R.drawable.icon_play);
+                }
+                isPaused = !isPaused;
+                drawerLayout.closeDrawers();
                 break;
             case R.id.main_menu_pip_mode:
                 enterPictureInPictureMode();

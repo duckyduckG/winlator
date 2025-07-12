@@ -13,16 +13,20 @@ import java.util.Locale;
 public class Win32AppWorkarounds {
 
     private final XServerDisplayActivity activity;
-    private final short taskAffinityMask;
-    private final short taskAffinityMaskWoW64;
+    private short taskAffinityMask;
+    private short taskAffinityMaskWoW64;
     private ArrayMap<String, Workaround> workarounds;
 
     public Win32AppWorkarounds(XServerDisplayActivity activity) {
         this.activity = activity;
+    }
 
-        // Initialize affinity masks
-        this.taskAffinityMask = (short) ProcessHelper.getAffinityMask(activity.getContainer().getCPUList(true));
-        this.taskAffinityMaskWoW64 = (short) ProcessHelper.getAffinityMask(activity.getContainer().getCPUListWoW64(true));
+    public void setTaskAffinityMask(short taskAffinityMask) {
+        this.taskAffinityMask = taskAffinityMask;
+    }
+
+    public void setTaskAffinityMaskWoW64(short taskAffinityMaskWoW64) {
+        this.taskAffinityMaskWoW64 = taskAffinityMaskWoW64;
     }
 
     private void initWorkarounds() {
