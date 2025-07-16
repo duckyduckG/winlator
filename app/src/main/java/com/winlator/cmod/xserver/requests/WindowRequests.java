@@ -263,7 +263,7 @@ public abstract class WindowRequests {
 
         try (XStreamLock lock = outputStream.lock()) {
             outputStream.writeByte(RESPONSE_CODE_SUCCESS);
-            outputStream.writeByte((byte)((!client.xServer.isRelativeMouseMovement() || !client.xServer.isForceMouseControl())  ? 1 : 0));
+            outputStream.writeByte((byte)((!client.xServer.isRelativeMouseMovement())  ? 1 : 0));
             outputStream.writeShort(client.getSequenceNumber());
             outputStream.writeInt(0);
             outputStream.writeInt(client.xServer.windowManager.rootWindow.id);
@@ -306,7 +306,7 @@ public abstract class WindowRequests {
     }
 
     public static void warpPointer(XClient client, XInputStream inputStream, XOutputStream outputStream) throws IOException, XRequestError {
-        if ((client.xServer.isRelativeMouseMovement() || client.xServer.isForceMouseControl()) && !client.xServer.isSimulateTouchScreen()) {
+        if (client.xServer.isRelativeMouseMovement()) {
             client.skipRequest();
             return;
         }

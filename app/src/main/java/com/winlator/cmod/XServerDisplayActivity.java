@@ -197,6 +197,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     PreloaderDialog preloaderDialog = null;
     private Runnable configChangedCallback = null;
     private boolean isPaused = false;
+    private boolean isRelativeMouseMovement;
 
     // Inside the XServerDisplayActivity class
     private SensorManager sensorManager;
@@ -499,7 +500,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             firstTimeBoot = container.getExtra("appVersion").isEmpty();
 
             String wineVersion = container.getWineVersion();
-            wineInfo = WineInfo.fromIdentifier(this, wineVersion);
+            wineInfo = WineInfo.fromIdentifier(this, contentsManager, wineVersion);
 
             imageFs.setWinePath(wineInfo.path);
 
@@ -536,6 +537,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             screenSize = container.getScreenSize();
             winHandler.setInputType((byte) container.getInputType());
             lc_all = container.getLC_ALL();
+            isRelativeMouseMovement = container.isRelativeMouseMovement();
 
             // Log the entire intent to verify the extras
             Intent intent = getIntent();
@@ -554,6 +556,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 String inputType = shortcut.getExtra("inputType");
                 if (!inputType.isEmpty()) winHandler.setInputType(Byte.parseByte(inputType));
                 String xinputDisabledString = shortcut.getExtra("disableXinput", "false");
+                isRelativeMouseMovement = shortcut.getExtra("relativeMouseMovement", container.isRelativeMouseMovement() ? "1" : "0").equals("1") ? true : false;
                 xinputDisabledFromShortcut = parseBoolean(xinputDisabledString);
                 // Pass the value to WinHandler
                 winHandler.setXInputDisabled(xinputDisabledFromShortcut);
@@ -585,8 +588,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         xServer.setWinHandler(winHandler);
 
         boolean[] winStarted = {false};
-
-//        startProcessDetection();
 
         // Add the OnWindowModificationListener for dynamic workarounds
         xServer.windowManager.addOnWindowModificationListener(new WindowManager.OnWindowModificationListener() {
@@ -668,30 +669,14 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             Executors.newSingleThreadExecutor().execute(() -> {
                     
                 if (!isGenerateWineprefix()) {
-
                     setupWineSystemFiles();
                     extractGraphicsDriverFiles();
 //                    container.setGraphicsDriverVersion(originalContainerDriverVersion);
 //                    container.saveData();
                     changeWineAudioDriver();
-                    if (container != null) {
-                        if (!wineInfo.isArm64EC())
-                            envVars.put("HODLL", "wow64cpu.dll");
-                        else if (emulator.toLowerCase().equals("fexcore"))
-                            envVars.put("HODLL", "libwow64fex.dll");
-                        else
-                            envVars.put("HODLL", "wowbox64.dll");
-                        if (isOpenWithAndroidBrowser)
-                            envVars.put("WINE_OPEN_WITH_ANDROID_BROWSER", "1");
-                        if (isShareAndroidClipboard) {
-                            envVars.put("WINE_FROM_ANDROID_CLIPBOARD", "1");
-                            envVars.put("WINE_TO_ANDROID_CLIPBOARD", "1");
-                        }
-                    }
 //                    runWinetricksAfterSetup();
                     // Run winetricks before setting up the X environment
 //                    runWinetricks("--force vcrun2010");  // Replace with the desired winetricks arguments
-
                 }
                 try {
                     setupXEnvironment();
@@ -752,17 +737,17 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         switch (event.getAction()) {
             case MotionEvent.ACTION_BUTTON_PRESS:
                 if (actionButton == MotionEvent.BUTTON_PRIMARY) {
-                    if (xServer.isForceMouseControl() || xServer.isRelativeMouseMovement())
+                    if (xServer.isRelativeMouseMovement())
                         xServer.getWinHandler().mouseEvent(MouseEventFlags.LEFTDOWN, 0, 0, 0);
                     else
                         xServer.injectPointerButtonPress(Pointer.Button.BUTTON_LEFT);
                 } else if (actionButton == MotionEvent.BUTTON_SECONDARY) {
-                    if (xServer.isRelativeMouseMovement() || xServer.isForceMouseControl())
+                    if (xServer.isRelativeMouseMovement())
                         xServer.getWinHandler().mouseEvent(MouseEventFlags.RIGHTDOWN, 0, 0, 0);
                     else
                         xServer.injectPointerButtonPress(Pointer.Button.BUTTON_RIGHT);
                 } else if (actionButton == MotionEvent.BUTTON_TERTIARY) {
-                    if (xServer.isForceMouseControl() || xServer.isRelativeMouseMovement())
+                    if (xServer.isRelativeMouseMovement())
                         xServer.getWinHandler().mouseEvent(MouseEventFlags.MIDDLEDOWN, 0, 0, 0);
                     else
                         xServer.injectPointerButtonPress(Pointer.Button.BUTTON_MIDDLE); // Add this line for middle mouse button press
@@ -771,17 +756,17 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 break;
             case MotionEvent.ACTION_BUTTON_RELEASE:
                 if (actionButton == MotionEvent.BUTTON_PRIMARY) {
-                    if (xServer.isRelativeMouseMovement() || xServer.isForceMouseControl())
+                    if (xServer.isRelativeMouseMovement())
                         xServer.getWinHandler().mouseEvent(MouseEventFlags.LEFTUP, 0, 0, 0);
                     else
                         xServer.injectPointerButtonRelease(Pointer.Button.BUTTON_LEFT);
                 } else if (actionButton == MotionEvent.BUTTON_SECONDARY) {
-                    if (xServer.isRelativeMouseMovement() || xServer.isForceMouseControl())
+                    if (xServer.isRelativeMouseMovement())
                         xServer.getWinHandler().mouseEvent(MouseEventFlags.RIGHTUP, 0, 0, 0);
                     else
                         xServer.injectPointerButtonRelease(Pointer.Button.BUTTON_RIGHT);
                 } else if (actionButton == MotionEvent.BUTTON_TERTIARY) {
-                    if (xServer.isRelativeMouseMovement() || xServer.isForceMouseControl())
+                    if (xServer.isRelativeMouseMovement())
                         xServer.getWinHandler().mouseEvent(MouseEventFlags.MIDDLEUP, 0, 0, 0);
                     else
                         xServer.injectPointerButtonRelease(Pointer.Button.BUTTON_MIDDLE); // Add this line for middle mouse button release
@@ -791,7 +776,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             case MotionEvent.ACTION_MOVE:
             case MotionEvent.ACTION_HOVER_MOVE:
                 float[] transformedPoint = XForm.transformPoint(xform, event.getX(), event.getY());
-                if (xServer.isRelativeMouseMovement() || xServer.isForceMouseControl())
+                if (xServer.isRelativeMouseMovement())
                     xServer.getWinHandler().mouseEvent(MouseEventFlags.MOVE, (int)transformedPoint[0], (int)transformedPoint[1], 0);
                 else
                     xServer.injectPointerMove((int)transformedPoint[0], (int)transformedPoint[1]);
@@ -800,14 +785,14 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             case MotionEvent.ACTION_SCROLL:
                 float scrollY = event.getAxisValue(MotionEvent.AXIS_VSCROLL);
                 if (scrollY <= -1.0f) {
-                    if (xServer.isRelativeMouseMovement() || xServer.isForceMouseControl())
+                    if (xServer.isRelativeMouseMovement())
                         xServer.getWinHandler().mouseEvent(MouseEventFlags.WHEEL, 0, 0, (int)scrollY * 270);
                     else {
                         xServer.injectPointerButtonPress(Pointer.Button.BUTTON_SCROLL_DOWN);
                         xServer.injectPointerButtonRelease(Pointer.Button.BUTTON_SCROLL_DOWN);
                     }
                 } else if (scrollY >= 1.0f) {
-                    if (xServer.isRelativeMouseMovement() || xServer.isForceMouseControl())
+                    if (xServer.isRelativeMouseMovement())
                         xServer.getWinHandler().mouseEvent(MouseEventFlags.WHEEL, 0, 0,(int)scrollY * 270);
                     else {
                         xServer.injectPointerButtonPress(Pointer.Button.BUTTON_SCROLL_UP);
@@ -855,7 +840,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         }
         startTime = System.currentTimeMillis();
         handler.postDelayed(savePlaytimeRunnable, SAVE_INTERVAL_MS);
-
+        ProcessHelper.resumeAllWineProcesses();
     }
 
     @Override
@@ -879,6 +864,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         savePlaytimeData();
         handler.removeCallbacks(savePlaytimeRunnable);
+        ProcessHelper.pauseAllWineProcesses();
     }
 
 
@@ -1177,6 +1163,17 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         }
     }
 
+    private void extractInputDLLs(boolean isLegacyInput) {
+        String inputAsset = isLegacyInput ? "legacy_input_dlls.tzst" : "input_dlls.tzst";
+        File wineFolder = new File(imageFs.getWinePath() + "/lib/wine/");
+
+        Log.d("XServerDisplayActivity", "Extracting input dlls to " + wineFolder.getPath());
+
+        boolean success = TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, inputAsset, wineFolder);
+        if (!success)
+            Log.d("XServerDisplayActivity", "Failed to extract input dlls");
+    }
+
     private void setupWineSystemFiles() {
         String appVersion = String.valueOf(AppUtils.getVersionCode(this));
         String imgVersion = String.valueOf(imageFs.getVersion());
@@ -1238,6 +1235,9 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             container.putExtra("startupSelection", startupSelection);
             containerDataChanged = true;
         }
+
+        boolean isLegacyInput = preferences.getBoolean("legacy_mode_enabled", false);
+        extractInputDLLs(isLegacyInput);
 
         if (containerDataChanged) container.saveData();
     }
@@ -1828,6 +1828,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             touchpadView.setSimTouchScreen(simTouchScreen.equals("1"));
         }
 
+        xServer.setRelativeMouseMovement(isRelativeMouseMovement);
+
         AppUtils.observeSoftKeyboardVisibility(drawerLayout, renderer::setScreenOffsetYRelativeToCursor);
     }
 
@@ -1906,12 +1908,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         };
         loadProfileSpinner.run();
 
-        final CheckBox cbRelativeMouseMovement = dialog.findViewById(R.id.CBRelativeMouseMovement);
-        cbRelativeMouseMovement.setChecked(xServer.isRelativeMouseMovement());
-
-        final CheckBox cbSimTouchScreen = dialog.findViewById(R.id.CBSimulateTouchScreen);
-        cbSimTouchScreen.setChecked(touchpadView.isSimTouchScreen());
-
         final CheckBox cbShowTouchscreenControls = dialog.findViewById(R.id.CBShowTouchscreenControls);
         cbShowTouchscreenControls.setChecked(inputControlsView.isShowTouchscreenControls());
 
@@ -1944,7 +1940,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         });
 
         dialog.setOnConfirmCallback(() -> {
-            xServer.setRelativeMouseMovement(cbRelativeMouseMovement.isChecked());
             inputControlsView.setShowTouchscreenControls(cbShowTouchscreenControls.isChecked());
             boolean isTimeoutEnabled = cbEnableTimeout.isChecked();
             boolean isHapticsEnabled = cbEnableHaptics.isChecked();
@@ -1963,7 +1958,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 showInputControls(inputControlsManager.getProfiles().get(position - 1));
             }
             else hideInputControls();
-            touchpadView.setSimTouchScreen(cbSimTouchScreen.isChecked());
             updateProfile.run();
         });
 
@@ -1975,10 +1969,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
     private void simulateConfirmInputControlsDialog() {
         // Simulate setting the relative mouse movement and touchscreen controls from preferences
-        boolean isRelativeMouseMovement = preferences.getBoolean("relative_mouse_movement_enabled", false);
-        boolean isForceMouseControl = preferences.getBoolean("force_mouse_control_enabled", false);
-        xServer.setRelativeMouseMovement(isRelativeMouseMovement);
-        xServer.setForceMouseControl(isForceMouseControl);
 
         boolean isShowTouchscreenControls = preferences.getBoolean("show_touchscreen_controls_enabled", false); // default is false (hidden)
         inputControlsView.setShowTouchscreenControls(isShowTouchscreenControls);
@@ -2081,6 +2071,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         String selectedDriverVersion;
 
         String currentWrapperVersion = graphicsDriverConfig.get("version");
+        String isAdrenotoolsTurnip = graphicsDriverConfig.get("adrenotoolsTurnip");
         selectedDriverVersion = currentWrapperVersion;
 
         if (shortcut != null) {
@@ -2106,7 +2097,10 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             envVars.put("MESA_VK_WSI_DEBUG", "sw");
         }
 
-        envVars.put("VK_ICD_FILENAMES", imageFs.getShareDir() + "/vulkan/icd.d/wrapper_icd.aarch64.json");
+        if (currentWrapperVersion.toLowerCase().contains("turnip") && isAdrenotoolsTurnip.equals("0"))
+            envVars.put("VK_ICD_FILENAMES", imageFs.getShareDir() + "/vulkan/icd.d/freedreno_icd.aarch64.json");
+        else
+            envVars.put("VK_ICD_FILENAMES", imageFs.getShareDir() + "/vulkan/icd.d/wrapper_icd.aarch64.json");
         envVars.put("GALLIUM_DRIVER", "zink");
         envVars.put("LIBGL_KOPPER_DISABLE", "true");
 

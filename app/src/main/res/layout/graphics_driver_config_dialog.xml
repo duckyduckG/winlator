@@ -49,5 +49,12 @@
             android:layout_height="wrap_content"
             android:id="@+id/SGraphicsDriverMaxDeviceMemory"
             android:spinnerMode="dialog"/>
+
+        <CheckBox
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/CBAdrenotoolsTurnip"
+            android:checked="true"
+            android:text="@string/graphics_driver_adrenotools_turnip" />
     </LinearLayout>
 </ScrollView>

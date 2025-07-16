@@ -404,7 +404,7 @@ public class InputControlsView extends View {
                 @Override
                 public void run() {
                     if (mouseMoveOffset.x != 0 || mouseMoveOffset.y != 0) {// Only move if there's an offsete if there's an offset
-                        if (xServer.isRelativeMouseMovement() || xServer.isForceMouseControl())
+                        if (xServer.isRelativeMouseMovement())
                             winHandler.mouseEvent(MouseEventFlags.MOVE, (int) (mouseMoveOffset.x * cursorSpeed * 10), (int) (mouseMoveOffset.y * cursorSpeed * 10), 0);
                         else
                             xServer.injectPointerMoveDelta(
@@ -737,7 +737,7 @@ public class InputControlsView extends View {
                 Pointer.Button pointerButton = binding.getPointerButton();
                 if (isActionDown) {
                     if (pointerButton != null) {
-                        if (xServer.isRelativeMouseMovement() || xServer.isForceMouseControl()) {
+                        if (xServer.isRelativeMouseMovement()) {
                             int wheelDelta = pointerButton == Pointer.Button.BUTTON_SCROLL_UP ? MOUSE_WHEEL_DELTA : (pointerButton == Pointer.Button.BUTTON_SCROLL_DOWN ? -MOUSE_WHEEL_DELTA : 0);
                             winHandler.mouseEvent(MouseEventFlags.getFlagFor(pointerButton, true), 0, 0, wheelDelta);
                         } else {
@@ -748,7 +748,7 @@ public class InputControlsView extends View {
                 }
                 else {
                     if (pointerButton != null) {
-                        if (xServer.isRelativeMouseMovement() || xServer.isForceMouseControl()) {
+                        if (xServer.isRelativeMouseMovement()) {
                             winHandler.mouseEvent(MouseEventFlags.getFlagFor(pointerButton, false), 0, 0, 0);
                         } else {
                             xServer.injectPointerButtonRelease(pointerButton);

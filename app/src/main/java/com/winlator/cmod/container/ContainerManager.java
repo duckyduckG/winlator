@@ -99,10 +99,10 @@ public class ContainerManager {
         FileUtils.symlink("./"+ImageFs.USER+"-"+container.id, file.getPath());
     }
 
-    public void createContainerAsync(final JSONObject data, Callback<Container> callback) {
+    public void createContainerAsync(final JSONObject data, ContentsManager contentsManager, Callback<Container> callback) {
         final Handler handler = new Handler();
         Executors.newSingleThreadExecutor().execute(() -> {
-            final Container container = createContainer(data);
+            final Container container = createContainer(data, contentsManager);
             handler.post(() -> callback.call(container));
         });
     }
@@ -123,7 +123,7 @@ public class ContainerManager {
         });
     }
 
-    private Container createContainer(JSONObject data) {
+    private Container createContainer(JSONObject data, ContentsManager contentsManager) {
         try {
             int id = maxContainerId + 1;
             data.put("id", id);
@@ -137,7 +137,7 @@ public class ContainerManager {
 
             container.setWineVersion(data.getString("wineVersion"));
 
-            if (!extractContainerPatternFile(container, container.getWineVersion(), containerDir, null)) {
+            if (!extractContainerPatternFile(container, container.getWineVersion(), contentsManager, containerDir, null)) {
                 FileUtils.delete(containerDir);
                 return null;
             }
@@ -249,10 +249,15 @@ public class ContainerManager {
         }
     }
 
-    public boolean extractContainerPatternFile(Container container, String wineVersion, File containerDir, OnExtractFileListener onExtractFileListener) {
-        WineInfo wineInfo = WineInfo.fromIdentifier(context, wineVersion);
+    public boolean extractContainerPatternFile(Container container, String wineVersion, ContentsManager contentsManager, File containerDir, OnExtractFileListener onExtractFileListener) {
+        WineInfo wineInfo = WineInfo.fromIdentifier(context, contentsManager, wineVersion);
         String containerPattern = wineVersion + "_container_pattern.tzst";
         boolean result = TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, context, containerPattern, containerDir, onExtractFileListener);
+
+        if (!result) {
+            File containerPatternFile = new File(wineInfo.path + "/prefixPack.txz");
+            result = TarCompressorUtils.extract(TarCompressorUtils.Type.XZ, containerPatternFile, containerDir);
+        }
 
         if (result) {
             try {

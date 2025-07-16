@@ -32,7 +32,7 @@ public class Container {
     public static final String DEFAULT_EMULATOR = "FEXCore";
     public static final String DEFAULT_DXWRAPPER = "dxvk";
     public static final String DEFAULT_DXWRAPPERCONFIG = "version=" + DefaultVersion.DXVK + ",framerate=0,maxDeviceMemory=0,async=0,asyncCache=0" + ",vkd3dVersion=" + DefaultVersion.VKD3D + ",vkd3dLevel=12_1";
-    public static final String DEFAULT_GRAPHICSDRIVERCONFIG = "version=" + DefaultVersion.WRAPPER + ";blacklistedExtensions=" + ";maxDeviceMemory=0";
+    public static final String DEFAULT_GRAPHICSDRIVERCONFIG = "version=" + DefaultVersion.WRAPPER + ";blacklistedExtensions=" + ";maxDeviceMemory=0" + ";adrenotoolsTurnip=1";
     public static final String DEFAULT_DDRAWRAPPER = "wined3d";
     public static final String DEFAULT_WINCOMPONENTS = "direct3d=1,directsound=0,directmusic=0,directshow=0,directplay=0,xaudio=0,vcrun2010=1,opengl=0";
     public static final String FALLBACK_WINCOMPONENTS = "direct3d=1,directsound=1,directmusic=1,directshow=1,directplay=1,xaudio=1,vcrun2010=1,opengl=0";
@@ -73,6 +73,7 @@ public class Container {
     private String fexcoreVersion = DefaultVersion.FEXCORE;
     private String box64Version = DefaultVersion.BOX64;
     private String emulator;
+    private boolean isRelativeMouseMovement;
 
     private ContainerManager containerManager;
 
@@ -195,6 +196,14 @@ public class Container {
 
     public void setControllerMapping(String controllerMapping) {
         this.controllerMapping = controllerMapping;
+    }
+
+    public boolean isRelativeMouseMovement() {
+        return this.isRelativeMouseMovement;
+    }
+
+    public void setRelativeMouseMovement(boolean isRelativeMouseMovement) {
+        this.isRelativeMouseMovement = isRelativeMouseMovement;
     }
 
     public boolean isFullscreenStretched() { return fullscreenStretched; }
@@ -408,6 +417,7 @@ public class Container {
             data.put("wincomponents", wincomponents);
             data.put("drives", drives);
             data.put("showFPS", showFPS);
+            data.put("relativeMouseMovement", isRelativeMouseMovement);
             data.put("fullscreenStretched", fullscreenStretched);
             data.put("inputType", inputType);
             data.put("wow64Mode", wow64Mode);
@@ -477,6 +487,9 @@ public class Container {
                     break;
                 case "showFPS" :
                     setShowFPS(data.getBoolean(key));
+                    break;
+                case "relativeMouseMovement":
+                    setRelativeMouseMovement(data.getBoolean(key));
                     break;
                 case "fullscreenStretched" :
                     setFullscreenStretched(data.getBoolean(key));

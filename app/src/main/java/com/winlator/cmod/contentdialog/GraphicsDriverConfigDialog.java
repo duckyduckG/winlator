@@ -37,9 +37,11 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
     private Spinner sVersion;
     private Spinner sAvailableExtensions;
     private Spinner sMaxDeviceMemory;
-    private String selectedVersion;
-    private String blacklistedExtensions = "";
-    private String selectedDeviceMemory;
+    private CheckBox cbAdrenotoolsTurnip;
+    private static String selectedVersion;
+    private static String blacklistedExtensions = "";
+    private static String selectedDeviceMemory;
+    private static String isAdrenotoolsTurnip = "1";
 
     protected class ExtensionAdapter extends ArrayAdapter<String> {
         ArrayList<String> extensions;
@@ -102,6 +104,14 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
         return mappedConfig;
     }
 
+    public static String toGraphicsDriverConfig(HashMap<String, String> config) {
+        String graphicsDriverConfig = "";
+        for (Map.Entry<String, String> entry : config.entrySet()) {
+            graphicsDriverConfig += entry.getKey() + "=" + entry.getValue() + ";";
+        }
+        return graphicsDriverConfig.substring(0, graphicsDriverConfig.length() - 1);
+    }
+
     public static String getVersion(String graphicsDriverConfig) {
         HashMap<String, String> config = parseGraphicsDriverConfig(graphicsDriverConfig);
         return config.get("version");
@@ -112,8 +122,8 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
         return config.get("blacklistedExtensions");
     }
 
-    public static String writeGraphicsDriverConfig(String version, String blacklistedExtensions, String maxDeviceMemory) {
-        String graphicsDriverConfig = "version=" + version + ";" + "blacklistedExtensions=" + blacklistedExtensions + ";" + "maxDeviceMemory=" + StringUtils.parseNumber(maxDeviceMemory);
+    public static String writeGraphicsDriverConfig() {
+        String graphicsDriverConfig = "version=" + selectedVersion + ";" + "blacklistedExtensions=" + blacklistedExtensions + ";" + "maxDeviceMemory=" + StringUtils.parseNumber(selectedDeviceMemory) + ";" + "adrenotoolsTurnip=" + isAdrenotoolsTurnip;
         Log.i(TAG, "Written config " + graphicsDriverConfig);
         return graphicsDriverConfig;
     }
@@ -132,12 +142,14 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
         sVersion = findViewById(R.id.SGraphicsDriverVersion);
         sAvailableExtensions = findViewById(R.id.SGraphicsDriverAvailableExtensions);
         sMaxDeviceMemory = findViewById(R.id.SGraphicsDriverMaxDeviceMemory);
+        cbAdrenotoolsTurnip = findViewById(R.id.CBAdrenotoolsTurnip);
 
         HashMap<String, String> config = parseGraphicsDriverConfig(graphicsDriverConfig);
 
         String initialVersion = config.get("version");
         String blExtensions = config.get("blacklistedExtensions");
         String maxDeviceMemory = config.get("maxDeviceMemory");
+        String adrenotoolsTurnip = config.get("adrenotoolsTurnip");
 
         // Update the selectedVersion whenever the user selects a different version
         sVersion.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -166,6 +178,12 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
             }
         });
 
+        cbAdrenotoolsTurnip.setOnCheckedChangeListener(null);
+        cbAdrenotoolsTurnip.setChecked(adrenotoolsTurnip.equals("1") ? true : false);
+        cbAdrenotoolsTurnip.setOnCheckedChangeListener((buttonView, isChecked) ->  {
+            isAdrenotoolsTurnip = isChecked ? "1" : "0";
+        });
+
         // Ensure ContentsManager syncContents is called
         ContentsManager contentsManager = new ContentsManager(anchor.getContext());
         contentsManager.syncContents();
@@ -186,7 +204,7 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
             if (graphicsDriverVersionView != null)
                 graphicsDriverVersionView.setText(selectedVersion);
 
-            anchor.setTag(writeGraphicsDriverConfig(selectedVersion, blacklistedExtensions, selectedDeviceMemory));
+            anchor.setTag(writeGraphicsDriverConfig());
         });
     }
 

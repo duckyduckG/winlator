@@ -148,7 +148,7 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
         FrameLayout fexcoreFL = findViewById(R.id.fexcoreFrame);
         String wineVersion = shortcut.container.getWineVersion();
-        WineInfo wineInfo = WineInfo.fromIdentifier(context, wineVersion);
+        WineInfo wineInfo = WineInfo.fromIdentifier(context, contentsManager, wineVersion);
         if (wineInfo.isArm64EC()) {
             fexcoreFL.setVisibility(View.VISIBLE);
             sEmulator.setEnabled(true);
@@ -292,6 +292,14 @@ public class ShortcutSettingsDialog extends ContentDialog {
         boolean isXInputDisabled = shortcut.getExtra("disableXinput", "0").equals("1");
         cbDisabledXInput.setChecked(isXInputDisabled);
 
+        final CheckBox cbRelativeMouseMovement = findViewById(R.id.CBRelativeMouseMovement);
+        String isRelativeMouseMovement = shortcut.getExtra("relativeMouseMovement", shortcut.container.isRelativeMouseMovement() ? "1" : "0");
+        cbRelativeMouseMovement.setChecked(isRelativeMouseMovement.equals("1") ? true : false);
+
+        final CheckBox cbSimTouchScreen = findViewById(R.id.CBTouchscreenMode);
+        String isTouchScreenMode = shortcut.getExtra("simTouchScreen");
+        cbSimTouchScreen.setChecked(isTouchScreenMode.equals("1") ? true : false);
+
         ContainerDetailFragment.createWinComponentsTabFromShortcut(this, getContentView(),
                 shortcut.getExtra("wincomponents", shortcut.container.getWinComponents()), isDarkMode);
 
@@ -366,6 +374,12 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
                 boolean disabledXInput = cbDisabledXInput.isChecked();
                 shortcut.putExtra("disableXinput", disabledXInput ? "1" : null);
+
+                boolean relativeMouseMovement = cbRelativeMouseMovement.isChecked();
+                shortcut.putExtra("relativeMouseMovement", relativeMouseMovement ? "1" : "0");
+
+                boolean touchscreenMode = cbSimTouchScreen.isChecked();
+                shortcut.putExtra("simTouchScreen", touchscreenMode ? "1" : "0");
 
                 String execArgs = etExecArgs.getText().toString();
                 shortcut.putExtra("execArgs", !execArgs.isEmpty() ? execArgs : null);

@@ -246,6 +246,15 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
 
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(context);
         boolean enableBox86_64Logs = preferences.getBoolean("enable_box86_64_logs", false);
+        boolean openWithAndroidBrowser = preferences.getBoolean("open_with_android_browser", false);
+        boolean shareAndroidClipboard = preferences.getBoolean("share_android_clipboard", false);
+
+        if (openWithAndroidBrowser)
+            envVars.put("WINE_OPEN_WITH_ANDROID_BROWSER", "1");
+        if (shareAndroidClipboard) {
+            envVars.put("WINE_FROM_ANDROID_CLIPBOARD", "1");
+            envVars.put("WINE_TO_ANDROID_CLIPBOARD", "1");
+        }
 
         EnvVars envVars = new EnvVars();
 
@@ -312,6 +321,10 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
             envVars.putAll(this.envVars);
         }
 
+        String emulator = container.getEmulator();
+        if (shortcut != null)
+            emulator = shortcut.getExtra("emulator", container.getEmulator());
+
         // Construct the command without Box64 to the Wine executable
         String command = "";
         String overriddenCommand = envVars.get("GUEST_PROGRAM_LAUNCHER_COMMAND");
@@ -322,8 +335,13 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
             command = command.trim();
         }
         else {
-            if (wineInfo.isArm64EC())
+            if (wineInfo.isArm64EC()) {
                 command = winePath + "/" + guestExecutable;
+                if (emulator.toLowerCase().equals("fexcore"))
+                    envVars.put("HODLL", "libwow64fex.dll");
+                else
+                    envVars.put("HODLL", "wowbox64.dll");
+            }
             else
                 command = imageFs.getBinDir() + "/box64 " + guestExecutable;
         }
