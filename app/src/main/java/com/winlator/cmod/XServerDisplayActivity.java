@@ -2072,6 +2072,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         String currentWrapperVersion = graphicsDriverConfig.get("version");
         String isAdrenotoolsTurnip = graphicsDriverConfig.get("adrenotoolsTurnip");
+
         selectedDriverVersion = currentWrapperVersion;
 
         if (shortcut != null) {
@@ -2089,8 +2090,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         } else if (dxwrapper.equals("vkd3d")) {
             VKD3DConfigDialog.setEnvVars(this, dxwrapperConfig, envVars);
         }
-
-        if (!envVars.has("MESA_VK_WSI_PRESENT_MODE")) envVars.put("MESA_VK_WSI_PRESENT_MODE", "mailbox");
 
         boolean useDRI3 = preferences.getBoolean("use_dri3", true);
         if (!useDRI3) {
@@ -2120,6 +2119,15 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         String maxDeviceMemory = graphicsDriverConfig.get("maxDeviceMemory");
         if (maxDeviceMemory != null && Integer.parseInt(maxDeviceMemory) > 0)
             envVars.put("UTIL_LAYER_VMEM_MAX_SIZE", maxDeviceMemory);
+
+        String frameSync = graphicsDriverConfig.get("frameSync");
+        if (frameSync.equals("Always") && useDRI3) {
+            envVars.put("MESA_VK_WSI_DEBUG", "forcesync");
+        }
+        else if (frameSync.equals("Never")) {
+            envVars.put("WRAPPER_DISABLE_PRESENT_WAIT", "1");
+        }
+        envVars.put("MESA_VK_WSI_PRESENT_MODE", "mailbox");
     }
 
     private void copyFile(File sourceFile, File destFile) throws IOException {
@@ -2185,9 +2193,9 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         // Handle the PlayStation or Xbox Home button to open the drawer
         if (event.getAction() == KeyEvent.ACTION_DOWN) {
-            if (event.getKeyCode() == KeyEvent.KEYCODE_BUTTON_MODE || event.getKeyCode() == KeyEvent.KEYCODE_HOME) {
-                openXServerDrawer(); // Method to open the XServer drawer
-                return true; // Indicate the event was handled
+            if (event.getKeyCode() == KeyEvent.KEYCODE_BUTTON_MODE || event.getKeyCode() == KeyEvent.KEYCODE_HOME || event.getKeyCode() == KeyEvent.KEYCODE_BUTTON_SELECT) {
+                boolean handled = inputControlsView.onKeyEvent(event) || (winHandler != null && winHandler.onKeyEvent(event)) && (xServer != null && xServer.keyboard.onKeyEvent(event));
+                return true;
             }
         }
 
@@ -2197,30 +2205,21 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 touchpadView.releasePointerCapture();
                 touchpadView.setOnCapturedPointerListener(null);
                 pointerCaptureRequested = false;
-
-                // Show toast message for pointer release
-                showToast(this, "Pointer capture released for 10 seconds");
-
-                // Schedule recapture after 10 seconds
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    if (touchpadView != null) {
-                        touchpadView.requestPointerCapture();
-                        touchpadView.setOnCapturedPointerListener(new View.OnCapturedPointerListener() {
-                            @Override
-                            public boolean onCapturedPointer(View view, MotionEvent event) {
-                                handleCapturedPointer(event);
-                                return true;
-                            }
-                        });
-                        pointerCaptureRequested = true;
-
-                        // Show toast message for pointer recapture
-                        showToast(this, "Pointer re-captured. If not working, press again to release and re-capture");
-                    }
-                }, RECAPTURE_DELAY_MS);
-
-                return true; // Indicate that the event was handled
+                showToast(this, "Pointer capture released");
             }
+            else if (touchpadView != null && !pointerCaptureRequested) {
+                touchpadView.requestPointerCapture();
+                touchpadView.setOnCapturedPointerListener(new View.OnCapturedPointerListener() {
+                    @Override
+                    public boolean onCapturedPointer(View view, MotionEvent event) {
+                        handleCapturedPointer(event);
+                        return true;
+                    }
+                });
+                pointerCaptureRequested = true;
+                showToast(this, "Pointer re-captured");
+            }
+            return true; // Indicate that the event was handled
         }
 
         // **NEW: Check if the floating view is visible and forward the key event to it**

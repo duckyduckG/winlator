@@ -78,6 +78,11 @@
     <item>2048 MB</item>
     <item>4096 MB</item>
     </string-array>
+    <string-array name="frame_sync_entries">
+        <item>Never</item>
+        <item>Normal</item>
+        <item>Always</item>
+    </string-array>
     <string-array name="video_memory_size_entries">
         <item>32 MB</item>
         <item>64 MB</item>
