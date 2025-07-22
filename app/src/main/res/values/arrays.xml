@@ -323,4 +323,9 @@
         <item>proton-9.0-x86_64</item>
         <item>proton-9.0-arm64ec</item>
     </string-array>
+    <string-array name="vkbasalt_sharpness_entries">
+        <item>None</item>
+        <item>CAS</item>
+        <item>DLS</item>
+    </string-array>
 </resources>

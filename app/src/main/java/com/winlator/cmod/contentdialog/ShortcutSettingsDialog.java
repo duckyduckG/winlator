@@ -16,6 +16,7 @@ import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.PopupMenu;
+import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.TextView;
 
@@ -335,6 +336,51 @@ public class ShortcutSettingsDialog extends ContentDialog {
         final Spinner sStartupSelection = findViewById(R.id.SStartupSelection);
         sStartupSelection.setSelection(Integer.parseInt(shortcut.getExtra("startupSelection", String.valueOf(shortcut.container.getStartupSelection()))));
 
+        final Spinner sSharpnessEffect = findViewById(R.id.SSharpnessEffect);
+        final SeekBar sbSharpnessLevel = findViewById(R.id.SBSharpnessLevel);
+        final SeekBar sbSharpnessDenoise = findViewById(R.id.SBSharpnessDenoise);
+        final TextView tvSharpnessLevel = findViewById(R.id.TVSharpnessLevel);
+        final TextView tvSharpnessDenoise = findViewById(R.id.TVSharpnessDenoise);
+
+        AppUtils.setSpinnerSelectionFromValue(sSharpnessEffect, shortcut.getExtra("sharpnessEffect", "None"));
+
+        sbSharpnessLevel.setProgress(Integer.parseInt(shortcut.getExtra("sharpnessLevel", "100")));
+        tvSharpnessLevel.setText(shortcut.getExtra("sharpnessLevel", "100") + "%");
+        sbSharpnessLevel.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                tvSharpnessLevel.setText(progress + "%");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+        sbSharpnessDenoise.setProgress(Integer.parseInt(shortcut.getExtra("sharpnessDenoise", "100")));
+        tvSharpnessDenoise.setText(shortcut.getExtra("sharpnessDenoise", "100") + "%");
+        sbSharpnessDenoise.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                tvSharpnessDenoise.setText(progress + "%");
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
         final CPUListView cpuListView = findViewById(R.id.CPUListView);
         cpuListView.setCheckedCPUList(shortcut.getExtra("cpuList", shortcut.container.getCPUList(true)));
         final CPUListView cpuListViewWoW64 = findViewById(R.id.CPUListViewWoW64);
@@ -422,6 +468,13 @@ public class ShortcutSettingsDialog extends ContentDialog {
 
                 byte startupSelection = (byte)sStartupSelection.getSelectedItemPosition();
                 shortcut.putExtra("startupSelection", (startupSelection != shortcut.container.getStartupSelection()) ? String.valueOf(startupSelection) : null);
+
+                String sharpeningEffect = sSharpnessEffect.getSelectedItem().toString();
+                String sharpeningLevel = String.valueOf(sbSharpnessLevel.getProgress());
+                String sharpeningDenoise = String.valueOf(sbSharpnessDenoise.getProgress());
+                shortcut.putExtra("sharpnessEffect", sharpeningEffect);
+                shortcut.putExtra("sharpnessLevel", sharpeningLevel);
+                shortcut.putExtra("sharpnessDenoise", sharpeningDenoise);
 
                 ArrayList<ControlsProfile> profiles = inputControlsManager.getProfiles(true);
                 int controlsProfile = sControlsProfile.getSelectedItemPosition() > 0 ? profiles.get(sControlsProfile.getSelectedItemPosition() - 1).id : 0;

@@ -194,6 +194,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     private MidiHandler midiHandler;
     private String midiSoundFont = "";
     private String lc_all = "";
+    private String vkbasaltConfig = "";
     PreloaderDialog preloaderDialog = null;
     private Runnable configChangedCallback = null;
     private boolean isPaused = false;
@@ -560,6 +561,12 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 xinputDisabledFromShortcut = parseBoolean(xinputDisabledString);
                 // Pass the value to WinHandler
                 winHandler.setXInputDisabled(xinputDisabledFromShortcut);
+                String sharpnessEffect = shortcut.getExtra("sharpnessEffect", "None");
+                if (!sharpnessEffect.equals("None")) {
+                    double sharpnessLevel = Double.parseDouble(shortcut.getExtra("sharpnessLevel", "100"));
+                    double sharpnessDenoise = Double.parseDouble(shortcut.getExtra("sharpnessDenoise", "100"));
+                    vkbasaltConfig = "effects=" + sharpnessEffect.toLowerCase() + ";" + "casSharpness=" + sharpnessLevel / 100 + ";" + "dlsSharpness=" + sharpnessLevel / 100  + ";" + "dlsDenoise=" + sharpnessDenoise / 100 + ";" + "enableOnLaunch=True";
+                }
                 Log.d("XServerDisplayActivity", "XInput Disabled from Shortcut: " + xinputDisabledFromShortcut);
             }
 
@@ -779,7 +786,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 if (xServer.isRelativeMouseMovement())
                     xServer.getWinHandler().mouseEvent(MouseEventFlags.MOVE, (int)transformedPoint[0], (int)transformedPoint[1], 0);
                 else
-                    xServer.injectPointerMove((int)transformedPoint[0], (int)transformedPoint[1]);
+                    xServer.injectPointerMoveDelta((int)transformedPoint[0], (int)transformedPoint[1]);
                 handled = true;
                 break;
             case MotionEvent.ACTION_SCROLL:
@@ -2128,6 +2135,10 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             envVars.put("WRAPPER_DISABLE_PRESENT_WAIT", "1");
         }
         envVars.put("MESA_VK_WSI_PRESENT_MODE", "mailbox");
+        if (!vkbasaltConfig.isEmpty()) {
+            envVars.put("ENABLE_VKBASALT", "1");
+            envVars.put("VKBASALT_CONFIG", vkbasaltConfig);
+        }
     }
 
     private void copyFile(File sourceFile, File destFile) throws IOException {
@@ -2205,21 +2216,30 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 touchpadView.releasePointerCapture();
                 touchpadView.setOnCapturedPointerListener(null);
                 pointerCaptureRequested = false;
-                showToast(this, "Pointer capture released");
-            }
-            else if (touchpadView != null && !pointerCaptureRequested) {
-                touchpadView.requestPointerCapture();
-                touchpadView.setOnCapturedPointerListener(new View.OnCapturedPointerListener() {
-                    @Override
-                    public boolean onCapturedPointer(View view, MotionEvent event) {
-                        handleCapturedPointer(event);
-                        return true;
+
+                // Show toast message for pointer release
+                showToast(this, "Pointer capture released for 10 seconds");
+
+                // Schedule recapture after 10 seconds
+                new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                    if (touchpadView != null) {
+                        touchpadView.requestPointerCapture();
+                        touchpadView.setOnCapturedPointerListener(new View.OnCapturedPointerListener() {
+                            @Override
+                            public boolean onCapturedPointer(View view, MotionEvent event) {
+                                handleCapturedPointer(event);
+                                return true;
+                            }
+                        });
+                        pointerCaptureRequested = true;
+
+                        // Show toast message for pointer recapture
+                        showToast(this, "Pointer re-captured. If not working, press again to release and re-capture");
                     }
-                });
-                pointerCaptureRequested = true;
-                showToast(this, "Pointer re-captured");
+                }, RECAPTURE_DELAY_MS);
+
+                return true; // Indicate that the event was handled
             }
-            return true; // Indicate that the event was handled
         }
 
         // **NEW: Check if the floating view is visible and forward the key event to it**
