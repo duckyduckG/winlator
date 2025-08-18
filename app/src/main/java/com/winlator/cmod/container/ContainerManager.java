@@ -190,7 +190,6 @@ public class ContainerManager {
         dstContainer.setStartupSelection(srcContainer.getStartupSelection());
         dstContainer.setBox64Preset(srcContainer.getBox64Preset());
         dstContainer.setDesktopTheme(srcContainer.getDesktopTheme());
-        dstContainer.setRcfileId(srcContainer.getRCFileId());
         dstContainer.setWineVersion(srcContainer.getWineVersion());
         dstContainer.saveData();
 
@@ -247,7 +246,7 @@ public class ContainerManager {
                 dstFile = onExtractFileListener.onExtractFile(dstFile, 0);
                 if (dstFile == null) continue;
             }
-            FileUtils.symlink(file.getPath(), dstFile.getPath());
+            FileUtils.copy(file, dstFile);
         }
     }
 
