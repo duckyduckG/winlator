@@ -914,20 +914,12 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             case R.id.main_menu_touchpad_help:
                 showTouchpadHelpDialog();
                 break;
-            case R.id.main_menu_terminal:  // New case for TerminalActivity
-                openTerminal();
-                return true;
             case R.id.main_menu_exit:
                 drawerLayout.closeDrawers();
                 exit();
                 break;
         }
         return true;
-    }
-
-    private void openTerminal() {
-        Intent intent = new Intent(this, TerminalActivity.class);
-        startActivity(intent);
     }
 
     @Override
@@ -960,12 +952,9 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         }
     }
 
-    private void extractInputDLLs(boolean isLegacyInput) {
-        String inputAsset = isLegacyInput ? "legacy_input_dlls.tzst" : "input_dlls.tzst";
+    private void extractInputDLLs() {
+        String inputAsset = "input_dlls.tzst";
         File wineFolder = new File(imageFs.getWinePath() + "/lib/wine/");
-
-        Log.d("XServerDisplayActivity", "Extracting input dlls to " + wineFolder.getPath());
-
         boolean success = TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, inputAsset, wineFolder);
         if (!success)
             Log.d("XServerDisplayActivity", "Failed to extract input dlls");
@@ -1032,9 +1021,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             container.putExtra("startupSelection", startupSelection);
             containerDataChanged = true;
         }
-
-        boolean isLegacyInput = preferences.getBoolean("legacy_mode_enabled", false);
-        extractInputDLLs(isLegacyInput);
+        
+        extractInputDLLs();
 
         if (containerDataChanged) container.saveData();
     }
@@ -1171,7 +1159,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         renderer.setCursorVisible(false);
 
         if (shortcut != null) {
-            if (shortcut.getExtra("forceFullscreen", "0").equals("1")) renderer.setForceFullscreenWMClass(shortcut.wmClass);
             renderer.setUnviewableWMClasses("explorer.exe");
         }
 

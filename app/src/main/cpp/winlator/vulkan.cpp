@@ -14,6 +14,7 @@
 #define printf(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 
 PFN_vkGetInstanceProcAddr gip;
+static void *vulkan_handle = nullptr;
 
 const char *get_native_library_dir(JNIEnv *env, jobject context) {
     char *native_libdir;
@@ -70,18 +71,19 @@ const char *get_library_name(JNIEnv *env, jobject context, const char *driver_na
     return library_name;
 }
 
-void *init_original_vulkan() {
-    return dlopen("/system/lib64/libvulkan.so", RTLD_LOCAL | RTLD_NOW);
+void init_original_vulkan() {
+    vulkan_handle = dlopen("/system/lib64/libvulkan.so", RTLD_LOCAL | RTLD_NOW);
 }
 
-void *init_vulkan(JNIEnv  *env, jobject context, jstring driverName) {
+void init_vulkan(JNIEnv  *env, jobject context, jstring driverName) {
         char *tmpdir;
-        void *vulkan_handle;
 
         const char *driver_name = env->GetStringUTFChars(driverName, nullptr);
 
-        if (!strcmp(driver_name, "System"))
-            return init_original_vulkan();
+        if (!strcmp(driver_name, "System")) {
+            init_original_vulkan();
+            return;
+        }
 
         const char *driver_path = get_driver_path(env, context, driver_name);
         const char *library_name = get_library_name(env, context, driver_name);
@@ -95,20 +97,17 @@ void *init_vulkan(JNIEnv  *env, jobject context, jstring driverName) {
         vulkan_handle = adrenotools_open_libvulkan(RTLD_LOCAL | RTLD_NOW, ADRENOTOOLS_DRIVER_CUSTOM, tmpdir, native_library_dir, driver_path, library_name, nullptr, nullptr);
 
         if (!vulkan_handle)
-           return init_original_vulkan();
-
-        return vulkan_handle;
+            init_original_vulkan();
 }
 
 VkResult create_instance(jstring driverName, JNIEnv *env, jobject context, VkInstance *instance) {
     VkResult result;
     VkInstanceCreateInfo create_info = {};
-    void *vulkan_handle;
 
     if (driverName)
-        vulkan_handle = init_vulkan(env, context, driverName);
+      init_vulkan(env, context, driverName);
     else
-        vulkan_handle = init_original_vulkan();
+      init_original_vulkan();
 
     gip = (PFN_vkGetInstanceProcAddr)dlsym(vulkan_handle, "vkGetInstanceProcAddr");
     PFN_vkCreateInstance createInstance = (PFN_vkCreateInstance)dlsym(vulkan_handle, "vkCreateInstance");
@@ -177,6 +176,7 @@ Java_com_winlator_cmod_core_GPUInformation_getVersion(JNIEnv *env, jclass obj, j
     }
 
     destroyInstance(instance, NULL);
+    dlclose(vulkan_handle);
 
     return (env->NewStringUTF(driverVersion));
 }
@@ -216,6 +216,7 @@ Java_com_winlator_cmod_core_GPUInformation_getVulkanVersion(JNIEnv *env, jclass 
     }
 
     destroyInstance(instance, NULL);
+    dlclose(vulkan_handle);
 
     return (env->NewStringUTF(vulkanVersion));
 }
@@ -251,6 +252,7 @@ Java_com_winlator_cmod_core_GPUInformation_getRenderer(JNIEnv *env, jclass obj, 
     }
 
     destroyInstance(instance, NULL);
+    dlclose(vulkan_handle);
 
     return (env->NewStringUTF(renderer));
 }
@@ -295,6 +297,7 @@ Java_com_winlator_cmod_core_GPUInformation_enumerateExtensions(JNIEnv *env, jcla
     }
 
     destroyInstance(instance, NULL);
+    dlclose(vulkan_handle);
 
     return extensions;
 }

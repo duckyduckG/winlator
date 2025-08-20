@@ -321,11 +321,6 @@ public class ContainerDetailFragment extends Fragment {
         contentsManager = new ContentsManager(context);
         contentsManager.syncContents();
 
-
-
-        boolean isLegacyModeEnabled = preferences.getBoolean("legacy_mode_enabled", false);
-
-
         final EditText etName = view.findViewById(R.id.ETName);
 
         final Spinner sWineVersion = view.findViewById(R.id.SWineVersion);
@@ -396,53 +391,29 @@ public class ContainerDetailFragment extends Fragment {
         // Check if we are in edit mode to set input type accordingly
         int inputType = isEditMode() ? container.getInputType() : WinHandler.DEFAULT_INPUT_TYPE;
 
-        // Initialize the TextView for the legacy mode message
-        TextView tvLegacyInputMessage = view.findViewById(R.id.TVLegacyInputMessage);
+        // New logic for enabling XInput and DInput
+        cbEnableXInput.setChecked((inputType & WinHandler.FLAG_INPUT_TYPE_XINPUT) == WinHandler.FLAG_INPUT_TYPE_XINPUT);
+        cbEnableDInput.setChecked((inputType & WinHandler.FLAG_INPUT_TYPE_DINPUT) == WinHandler.FLAG_INPUT_TYPE_DINPUT);
 
-        if (!isLegacyModeEnabled) {
+        cbEnableDInput.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            llDInputType.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+            if (isChecked && cbEnableXInput.isChecked())
+                showInputWarning.run();
+        });
 
-            // Set visibility of legacy mode message
-            tvLegacyInputMessage.setVisibility(View.GONE); // Hide message when not in legacy mode
+        cbEnableXInput.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked && cbEnableDInput.isChecked())
+                showInputWarning.run();
+        });
 
-            // New logic for enabling XInput and DInput
-            cbEnableXInput.setChecked((inputType & WinHandler.FLAG_INPUT_TYPE_XINPUT) == WinHandler.FLAG_INPUT_TYPE_XINPUT);
-            cbEnableDInput.setChecked((inputType & WinHandler.FLAG_INPUT_TYPE_DINPUT) == WinHandler.FLAG_INPUT_TYPE_DINPUT);
+        SDInputType.setSelection(((inputType & WinHandler.FLAG_DINPUT_MAPPER_STANDARD) == WinHandler.FLAG_DINPUT_MAPPER_STANDARD) ? 0 : 1);
+        llDInputType.setVisibility(cbEnableDInput.isChecked() ? View.VISIBLE : View.GONE);
 
-            cbEnableDInput.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                llDInputType.setVisibility(isChecked ? View.VISIBLE : View.GONE);
-                if (isChecked && cbEnableXInput.isChecked())
-                    showInputWarning.run();
-            });
-
-            cbEnableXInput.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (isChecked && cbEnableDInput.isChecked())
-                    showInputWarning.run();
-            });
-
-            SDInputType.setSelection(((inputType & WinHandler.FLAG_DINPUT_MAPPER_STANDARD) == WinHandler.FLAG_DINPUT_MAPPER_STANDARD) ? 0 : 1);
-            llDInputType.setVisibility(cbEnableDInput.isChecked() ? View.VISIBLE : View.GONE);
-
-            btHelpXInput.setOnClickListener(v -> AppUtils.showHelpBox(context, v, R.string.help_xinput));
-            btHelpDInput.setOnClickListener(v -> AppUtils.showHelpBox(context, v, R.string.help_dinput));
-        } else {
-            // Legacy mode handling: disable or hide input-related UI elements
-            cbEnableXInput.setVisibility(View.GONE);
-            cbEnableDInput.setVisibility(View.GONE);
-            llDInputType.setVisibility(View.GONE);
-            btHelpXInput.setVisibility(View.GONE);
-            btHelpDInput.setVisibility(View.GONE);
-            SDInputType.setVisibility(View.GONE);
-
-            // Show the legacy input mode message
-            tvLegacyInputMessage.setVisibility(View.VISIBLE);
-
-            // Set inputType to default or legacy-compatible setting
-            inputType = WinHandler.DEFAULT_INPUT_TYPE;
-        }
+        btHelpXInput.setOnClickListener(v -> AppUtils.showHelpBox(context, v, R.string.help_xinput));
+        btHelpDInput.setOnClickListener(v -> AppUtils.showHelpBox(context, v, R.string.help_dinput));
 
         final CheckBox cbSdl2Toggle = view.findViewById(R.id.CBSdl2Toggle);
         cbSdl2Toggle.setChecked(isEditMode() && container.getEnvVars().contains("SDL_XINPUT_ENABLED=1"));
-
 
         final EditText etLC_ALL = view.findViewById(R.id.ETlcall);
         Locale systemLocal = Locale.getDefault();
