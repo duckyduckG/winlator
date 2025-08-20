@@ -123,7 +123,6 @@ public class ShortcutSettingsDialog extends ContentDialog {
         final View vDXWrapperConfig = findViewById(R.id.BTDXWrapperConfig);
         vDXWrapperConfig.setTag(shortcut.getExtra("dxwrapperConfig", shortcut.container.getDXWrapperConfig()));
 
-        ContainerDetailFragment.setupDXWrapperSpinner(sDXWrapper, vDXWrapperConfig);
         ContainerDetailFragment.setupDDrawSpinner(sDDrawrapper, shortcut.getExtra("ddrawrapper", shortcut.container.getDDrawWrapper()));
         loadGraphicsDriverSpinner(sGraphicsDriver, sDXWrapper, vGraphicsDriverConfig, shortcut.getExtra("graphicsDriver", shortcut.container.getGraphicsDriver()),
             shortcut.getExtra("dxwrapper", shortcut.container.getDXWrapper()));
@@ -155,6 +154,7 @@ public class ShortcutSettingsDialog extends ContentDialog {
             sEmulator64.setSelection(1);
         }
 
+        ContainerDetailFragment.setupDXWrapperSpinner(sDXWrapper, vDXWrapperConfig, wineInfo.isArm64EC());
         loadBox64VersionSpinner(context, contentsManager, sBox64Version, wineInfo.isArm64EC());
 
         // Add this part to set the initial spinner selection based on the shortcut
@@ -163,7 +163,7 @@ public class ShortcutSettingsDialog extends ContentDialog {
             AppUtils.setSpinnerSelectionFromValue(sBox64Version, currentBox64Version);
         } else {
             // Default selection or use a preferred default version
-            AppUtils.setSpinnerSelectionFromValue(sBox64Version, DefaultVersion.BOX64);
+            AppUtils.setSpinnerSelectionFromValue(sBox64Version, wineInfo.isArm64EC() ? DefaultVersion.WOWBOX64 : DefaultVersion.BOX64);
         }
 
         // Set OnItemSelectedListener for the Box64 version spinner

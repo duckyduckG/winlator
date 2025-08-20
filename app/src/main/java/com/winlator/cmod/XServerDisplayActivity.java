@@ -1465,12 +1465,9 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     }
 
     private void extractGraphicsDriverFiles() {
-        String adrenoToolsDriverId = "";
-
-        String selectedDriverVersion = graphicsDriverConfig.get("version");
+        String adrenoToolsDriverId = graphicsDriverConfig.get("version");
         String isAdrenotoolsTurnip = graphicsDriverConfig.get("adrenotoolsTurnip");
 
-        adrenoToolsDriverId = (selectedDriverVersion.contains(DefaultVersion.WRAPPER)) ? DefaultVersion.WRAPPER : selectedDriverVersion;
         Log.d("GraphicsDriverExtraction", "Adrenotools DriverID: " + adrenoToolsDriverId);
 
         File rootDir = imageFs.getRootDir();
@@ -1486,7 +1483,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             envVars.put("MESA_VK_WSI_DEBUG", "sw");
         }
 
-        if (selectedDriverVersion.toLowerCase().contains("turnip") && isAdrenotoolsTurnip.equals("0"))
+        if (adrenoToolsDriverId.toLowerCase().contains("turnip") && isAdrenotoolsTurnip.equals("0"))
             envVars.put("VK_ICD_FILENAMES", imageFs.getShareDir() + "/vulkan/icd.d/freedreno_icd.aarch64.json");
         else
             envVars.put("VK_ICD_FILENAMES", imageFs.getShareDir() + "/vulkan/icd.d/wrapper_icd.aarch64.json");
@@ -1638,8 +1635,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         if (dxwrapper.contains("vkd3d")) {
             ContentProfile profile = contentsManager.getProfileByEntryName(dxwrapper);
-            Log.d(TAG, "Extracting DXVK 2.4.1");
-            TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "dxwrapper/dxvk-2.4.1" + ".tzst", windowsDir, onExtractFileListener);
+            Log.d(TAG, "Extracting DXVK 2.3.1");
+            TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "dxwrapper/dxvk-2.3.1" + ".tzst", windowsDir, onExtractFileListener);
             if (profile != null) {
                 Log.d(TAG, "Applying user-defined VKD3D content profile: " + dxwrapper);
                 contentsManager.applyContent(profile);

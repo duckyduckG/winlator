@@ -16,7 +16,7 @@
 PFN_vkGetInstanceProcAddr gip;
 static void *vulkan_handle = nullptr;
 
-const char *get_native_library_dir(JNIEnv *env, jobject context) {
+char *get_native_library_dir(JNIEnv *env, jobject context) {
     char *native_libdir;
 
     if (context != nullptr) {
@@ -32,7 +32,7 @@ const char *get_native_library_dir(JNIEnv *env, jobject context) {
     return native_libdir;
 }
 
-const char *get_driver_path(JNIEnv *env, jobject context, const char *driver_name) {
+char *get_driver_path(JNIEnv *env, jobject context, const char *driver_name) {
     char *driver_path;
     char *absolute_path;
 
@@ -53,7 +53,7 @@ const char *get_driver_path(JNIEnv *env, jobject context, const char *driver_nam
     return driver_path;
 }
 
-const char *get_library_name(JNIEnv *env, jobject context, const char *driver_name) {
+char *get_library_name(JNIEnv *env, jobject context, const char *driver_name) {
     char *library_name;
 
     jclass adrenotoolsManager = env->FindClass("com/winlator/cmod/contents/AdrenotoolsManager");
@@ -75,39 +75,36 @@ void init_original_vulkan() {
     vulkan_handle = dlopen("/system/lib64/libvulkan.so", RTLD_LOCAL | RTLD_NOW);
 }
 
-void init_vulkan(JNIEnv  *env, jobject context, jstring driverName) {
+void init_vulkan(JNIEnv  *env, jobject context, const char *driver_name) {
         char *tmpdir;
-
-        const char *driver_name = env->GetStringUTFChars(driverName, nullptr);
-
-        if (!strcmp(driver_name, "System")) {
-            init_original_vulkan();
-            return;
-        }
+        char *library_name;
+        char *native_library_dir;
 
         const char *driver_path = get_driver_path(env, context, driver_name);
-        const char *library_name = get_library_name(env, context, driver_name);
-        const char *native_library_dir = get_native_library_dir(env, context);
 
-        if (driver_path) {
+        if (driver_path && (access(driver_path, F_OK) == 0)) {
+            library_name = get_library_name(env, context, driver_name);
+            native_library_dir = get_native_library_dir(env, context);
             asprintf(&tmpdir, "%s%s", driver_path, "temp");
             mkdir(tmpdir, S_IRWXU | S_IRWXG);
         }
 
         vulkan_handle = adrenotools_open_libvulkan(RTLD_LOCAL | RTLD_NOW, ADRENOTOOLS_DRIVER_CUSTOM, tmpdir, native_library_dir, driver_path, library_name, nullptr, nullptr);
-
-        if (!vulkan_handle)
-            init_original_vulkan();
 }
 
 VkResult create_instance(jstring driverName, JNIEnv *env, jobject context, VkInstance *instance) {
     VkResult result;
     VkInstanceCreateInfo create_info = {};
 
-    if (driverName)
-      init_vulkan(env, context, driverName);
+    const char *driver_name = env->GetStringUTFChars(driverName, nullptr);
+
+    if (driver_name && strcmp(driver_name, "System"))
+      init_vulkan(env, context, driver_name);
     else
       init_original_vulkan();
+
+    if (!vulkan_handle)
+        return VK_ERROR_INITIALIZATION_FAILED;
 
     gip = (PFN_vkGetInstanceProcAddr)dlsym(vulkan_handle, "vkGetInstanceProcAddr");
     PFN_vkCreateInstance createInstance = (PFN_vkCreateInstance)dlsym(vulkan_handle, "vkCreateInstance");
@@ -132,13 +129,38 @@ VkResult get_physical_devices(VkInstance instance, std::vector<VkPhysicalDevice>
     if (!enumeratePhysicalDevices)
         return VK_ERROR_INITIALIZATION_FAILED;
 
-    enumeratePhysicalDevices(instance, &deviceCount, NULL);
-    physical_devices.resize(deviceCount);
+    result = enumeratePhysicalDevices(instance, &deviceCount, NULL);
 
-    if (deviceCount > 0)
+    if (result == VK_SUCCESS && deviceCount > 0) {
+        physical_devices.resize(deviceCount);
         result = enumeratePhysicalDevices(instance, &deviceCount, physical_devices.data());
+    }
 
     return result;
+}
+
+extern "C" JNIEXPORT jboolean  JNICALL
+Java_com_winlator_cmod_core_GPUInformation_isDriverSupported(JNIEnv *env, jclass obj, jstring driverName, jobject context) {
+    VkResult result;
+    VkInstance instance;
+    std::vector<VkPhysicalDevice> pdevices;
+    PFN_vkDestroyInstance destroyInstance;
+    jboolean isSupported = false;
+
+    result = create_instance(driverName, env, context, &instance);
+
+    if (result == VK_SUCCESS) {
+        result = get_physical_devices(instance, pdevices);
+        if (result == VK_SUCCESS && (static_cast<uint32_t>(pdevices.size()) > 0))
+            isSupported = true;
+        destroyInstance = (PFN_vkDestroyInstance)gip(instance, "vkDestroyInstance");
+        destroyInstance(instance, nullptr);
+    }
+
+    if (vulkan_handle)
+        dlclose(vulkan_handle);
+
+    return isSupported;
 }
 
 extern "C" JNIEXPORT jstring JNICALL
@@ -176,7 +198,9 @@ Java_com_winlator_cmod_core_GPUInformation_getVersion(JNIEnv *env, jclass obj, j
     }
 
     destroyInstance(instance, NULL);
-    dlclose(vulkan_handle);
+
+    if (vulkan_handle)
+        dlclose(vulkan_handle);
 
     return (env->NewStringUTF(driverVersion));
 }
@@ -216,7 +240,8 @@ Java_com_winlator_cmod_core_GPUInformation_getVulkanVersion(JNIEnv *env, jclass 
     }
 
     destroyInstance(instance, NULL);
-    dlclose(vulkan_handle);
+    if (vulkan_handle)
+        dlclose(vulkan_handle);
 
     return (env->NewStringUTF(vulkanVersion));
 }
@@ -252,7 +277,8 @@ Java_com_winlator_cmod_core_GPUInformation_getRenderer(JNIEnv *env, jclass obj, 
     }
 
     destroyInstance(instance, NULL);
-    dlclose(vulkan_handle);
+    if (vulkan_handle)
+        dlclose(vulkan_handle);
 
     return (env->NewStringUTF(renderer));
 }
@@ -297,7 +323,8 @@ Java_com_winlator_cmod_core_GPUInformation_enumerateExtensions(JNIEnv *env, jcla
     }
 
     destroyInstance(instance, NULL);
-    dlclose(vulkan_handle);
+    if (vulkan_handle)
+        dlclose(vulkan_handle);
 
     return extensions;
 }
