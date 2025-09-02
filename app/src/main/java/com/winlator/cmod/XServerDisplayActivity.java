@@ -143,6 +143,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     private String emulator = Container.DEFAULT_EMULATOR;
     private String dxwrapper = Container.DEFAULT_DXWRAPPER;
     private KeyValueSet dxwrapperConfig;
+    private KeyValueSet fexConfig;
     private String startupSelection;
     private WineInfo wineInfo;
     private final EnvVars envVars = new EnvVars();
@@ -427,6 +428,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         screenSize = container.getScreenSize();
         winHandler.setInputType((byte) container.getInputType());
         lc_all = container.getLC_ALL();
+        String fexConfig = container.getFEXConfig();
 
         // Log the entire intent to verify the extras
         Intent intent = getIntent();
@@ -439,6 +441,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             emulator = shortcut.getExtra("emulator", container.getEmulator());
             dxwrapper = shortcut.getExtra("dxwrapper", container.getDXWrapper());
             dxwrapperConfig = shortcut.getExtra("dxwrapperConfig", container.getDXWrapperConfig());
+            fexConfig = shortcut.getExtra("fexConfig", container.getFEXConfig());
             screenSize = shortcut.getExtra("screenSize", container.getScreenSize());
             lc_all = shortcut.getExtra("lc_all", container.getLC_ALL());
             String inputType = shortcut.getExtra("inputType");
@@ -457,8 +460,8 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         }
 
         this.graphicsDriverConfig = GraphicsDriverConfigDialog.parseGraphicsDriverConfig(graphicsDriverConfig);
-
         this.dxwrapperConfig = DXVKConfigDialog.parseConfig(dxwrapperConfig);
+        this.fexConfig = new KeyValueSet(fexConfig);
 
         if (!wineInfo.isWin64()) {
             onExtractFileListener = (file, size) -> {
@@ -1021,6 +1024,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             }
             guestProgramLauncherComponent.setContainer(this.container);
             guestProgramLauncherComponent.setWineInfo(this.wineInfo);
+            guestProgramLauncherComponent.setFEXConfig(fexConfig);
 
             String guestExecutable = "wine explorer /desktop=shell," + xServer.screenInfo + " " + getWineStartCommand();
 
@@ -1192,7 +1196,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
 
 
-    private ActivityResultLauncher<Intent> controlsEitorActivityResultLauncher = registerForActivityResult(
+    private ActivityResultLauncher<Intent> controlsEditorActivityResultLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (editInputControlsCallback != null) {
@@ -1293,7 +1297,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 loadProfileSpinner.run();
                 updateProfile.run();
             };
-            controlsEitorActivityResultLauncher.launch(intent);
+            controlsEditorActivityResultLauncher.launch(intent);
         });
 
         dialog.setOnConfirmCallback(() -> {

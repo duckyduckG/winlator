@@ -57,6 +57,18 @@
                             android:id="@+id/BTRemoveBox64Preset"
                             android:layout_marginRight="0dp"
                             android:src="@drawable/icon_remove" />
+
+                        <ImageButton
+                            style="@style/ListMenuButton"
+                            android:id="@+id/BTExportBox64Preset"
+                            android:layout_marginRight="0dp"
+                            android:src="@drawable/icon_export" />
+
+                        <ImageButton
+                            style="@style/ListMenuButton"
+                            android:id="@+id/BTImportBox64Preset"
+                            android:layout_marginRight="0dp"
+                            android:src="@drawable/icon_popup_menu_download" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -134,7 +146,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Frontend Export Path" />
+                        android:text="Winlator Path" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -142,13 +154,34 @@
                         android:orientation="horizontal"
                         android:gravity="center_vertical">
                         <TextView
-                            android:id="@+id/TVFrontendExportPath"
+                            android:id="@+id/TVWinlatorPath"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="Default Path: Downloads/Winlator/Frontend" />
+                            android:layout_weight="1" />
                         <Button
-                            android:id="@+id/BTChooseFrontendExportPath"
+                            android:id="@+id/BTChooseWinlatorPath"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Choose Path" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Shortcut Export Path" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+                        <TextView
+                            android:id="@+id/TVShortcutExportPath"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1" />
+                        <Button
+                            android:id="@+id/BTChooseShortcutExportPath"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Choose Path" />
@@ -157,7 +190,7 @@
                 <TextView
                     android:id="@+id/TVShortcutSettings"
                     style="@style/FieldSetLabel"
-                    android:text="Shortcut Settings" />
+                    android:text="Path Settings" />
             </FrameLayout>
 
 
@@ -292,75 +325,6 @@
                     android:text="@string/xserver" />
             </FrameLayout>
 
-            <!-- Gyroscope Settings Section -->
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"> <!-- Add margin for spacing -->
-
-                <LinearLayout style="@style/FieldSet">
-
-                    <!-- Enable Gyroscope Checkbox -->
-                    <CheckBox
-                        android:id="@+id/CBGyroEnabled"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Enable Right-Stick Gyroscope (Experimental)"
-                        android:layout_marginBottom="16dp" /> <!-- Added margin for better spacing -->
-
-                    <!-- Gyro Activator Button Label -->
-                    <TextView
-                        android:id="@+id/TVGyroTriggerLabel"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Gyro Activator Button:"
-                        android:layout_marginBottom="8dp"/> <!-- Add some bottom margin for better spacing -->
-
-                    <!-- Spinner for selecting the gyro trigger button -->
-                    <Spinner
-                        android:id="@+id/SBGyroTriggerButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:entries="@array/button_options"
-                        android:layout_marginBottom="16dp" /> <!-- Add bottom margin to separate it from other elements -->
-
-                    <!-- RadioGroup for selecting gyro mode (toggle/hold) -->
-                    <RadioGroup
-                        android:id="@+id/RGyroMode"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <RadioButton
-                            android:id="@+id/RBHoldMode"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Hold Mode"
-                            android:layout_marginEnd="16dp" /> <!-- Add end margin for spacing -->
-
-                        <RadioButton
-                            android:id="@+id/RBToggleMode"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Toggle Mode" />
-                    </RadioGroup>
-
-                    <!-- Configure Gyroscope Button -->
-                    <Button
-                        android:id="@+id/BTConfigureGyro"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Calibrate Gyroscope"
-                        android:layout_marginTop="16dp" /> <!-- Add top margin for spacing -->
-
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/TVGyroSettings"
-                    style="@style/FieldSetLabel"
-                    android:text="Gyro Settings" />
-            </FrameLayout>
-
             <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
@@ -398,74 +362,6 @@
                     android:id="@+id/TVLogs"
                     style="@style/FieldSetLabel"
                     android:text="@string/logs" />
-            </FrameLayout>
-
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-
-                <LinearLayout style="@style/FieldSet">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/trigger_type"
-                            android:layout_gravity="center"/>
-
-                        <ImageView
-                            android:id="@+id/BTHelpTriggerMode"
-                            android:layout_gravity="center"
-                            style="@style/HelpButton" />
-                    </LinearLayout>
-
-
-                    <RadioGroup
-                        android:id="@+id/RGTriggerType"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal">
-                        <RadioButton
-                            android:id="@+id/RBTriggerIsButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/as_button"/>
-
-                        <RadioButton
-                            android:id="@+id/RBTriggerIsAxis"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/as_axis"/>
-
-                        <RadioButton
-                            android:id="@+id/RBTriggerIsMixed"
-                            android:visibility="gone"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/mixed"/>
-                    </RadioGroup>
-
-                    <Button
-                        android:id="@+id/BTConfigureAnalogSticks"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Configure Analog Sticks"
-                        android:layout_gravity="center_horizontal"
-                        android:layout_marginTop="16dp" />
-
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/TVGameControllerLabel"
-                    style="@style/FieldSetLabel"
-                    android:text="@string/game_controller" />
             </FrameLayout>
 
             <FrameLayout

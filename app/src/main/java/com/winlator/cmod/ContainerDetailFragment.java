@@ -421,13 +421,11 @@ public class ContainerDetailFragment extends Fragment {
         Box64PresetManager.loadSpinner("box64", sBox64Preset, isEditMode() ? container.getBox64Preset() : preferences.getString("box64_preset", Box64Preset.COMPATIBILITY));
 
         final Spinner sFEXCoreVersion = view.findViewById(R.id.SFEXCoreVersion);
-        FEXCoreManager.loadFEXCoreVersion(context, contentsManager, sFEXCoreVersion, container);
-
         final Spinner sFEXCoreTSOPreset = view.findViewById(R.id.SFEXCoreTSOPreset);
         final Spinner sFEXCoreMultiBlock = view.findViewById(R.id.SFEXCoreMultiblock);
         final Spinner sFEXCoreX87ReducedPrecision = view.findViewById(R.id.SFEXCoreX87ReducedPrecision);
         
-        FEXCoreManager.loadFEXCoreSettings(context, container, sFEXCoreTSOPreset, sFEXCoreMultiBlock, sFEXCoreX87ReducedPrecision);
+        FEXCoreManager.loadFEXCoreSpinners(context, contentsManager, sFEXCoreTSOPreset, sFEXCoreMultiBlock, sFEXCoreX87ReducedPrecision, sFEXCoreVersion, isEditMode() ? container.getFEXConfig() : Container.DEFAULT_FEXCONFIG);
 
         String selectedDriver = sGraphicsDriver.getSelectedItem().toString();
         List<String> sGraphicsItemsList = new ArrayList<>(Arrays.asList(context.getResources().getStringArray(R.array.graphics_driver_entries)));
@@ -495,9 +493,9 @@ public class ContainerDetailFragment extends Fragment {
                 String cpuListWoW64 = cpuListViewWoW64.getCheckedCPUListAsString();
                 byte startupSelection = (byte) sStartupSelection.getSelectedItemPosition();
                 String box64Version = sBox64Version.getSelectedItem().toString();
+                String fexcoreConfig = FEXCoreManager.saveFEXCoreConfig(sFEXCoreTSOPreset, sFEXCoreMultiBlock, sFEXCoreX87ReducedPrecision, sFEXCoreVersion);
                 String box64Preset = Box64PresetManager.getSpinnerSelectedId(sBox64Preset);
                 String desktopTheme = getDesktopTheme(view);
-                String fexcoreVersion = sFEXCoreVersion.getSelectedItem().toString();
                 // Capture missing properties
                 String midiSoundFont = sMIDISoundFont.getSelectedItemPosition() == 0 ? "" : sMIDISoundFont.getSelectedItem().toString();
                 String lc_all = etLC_ALL.getText().toString();
@@ -548,7 +546,7 @@ public class ContainerDetailFragment extends Fragment {
                     container.setStartupSelection(startupSelection);
                     container.setBox64Version(box64Version);
                     container.setBox64Preset(box64Preset);
-                    container.setFEXCoreVersion(fexcoreVersion);
+                    container.setFEXConfig(fexcoreConfig);
                     container.setDesktopTheme(desktopTheme);
                     container.setMidiSoundFont(midiSoundFont);
                     container.setLC_ALL(lc_all);
@@ -556,7 +554,6 @@ public class ContainerDetailFragment extends Fragment {
                     container.setControllerMapping(controllerMapping);
                     container.saveData();
                     saveWineRegistryKeys(view);
-                    FEXCoreManager.saveFEXCoreSpinners(container, sFEXCoreTSOPreset, sFEXCoreMultiBlock, sFEXCoreX87ReducedPrecision);
                     getActivity().onBackPressed();
                 } else {
                     // Create new container with specified properties
@@ -580,7 +577,7 @@ public class ContainerDetailFragment extends Fragment {
                     data.put("startupSelection", startupSelection);
                     data.put("box64Version", box64Version);
                     data.put("box64Preset", box64Preset);
-                    data.put("fexcoreVersion", fexcoreVersion);
+                    data.put("fexConfig", fexcoreConfig);
                     data.put("desktopTheme", desktopTheme);
                     data.put("wineVersion", sWineVersion.getSelectedItem().toString());
                     data.put("midiSoundFont", midiSoundFont);
@@ -599,7 +596,6 @@ public class ContainerDetailFragment extends Fragment {
                         if (container != null) {
                             this.container = container;
                             saveWineRegistryKeys(view);
-                            FEXCoreManager.saveFEXCoreSpinners(container, sFEXCoreTSOPreset, sFEXCoreMultiBlock, sFEXCoreX87ReducedPrecision);
                         }
                         preloaderDialog.close();
                         getActivity().onBackPressed();

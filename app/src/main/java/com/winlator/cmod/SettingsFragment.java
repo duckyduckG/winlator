@@ -14,6 +14,7 @@ import android.hardware.SensorManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.telecom.Call;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -61,7 +62,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -70,23 +73,16 @@ import java.util.concurrent.Executors;
 
 public class SettingsFragment extends Fragment {
     public static final String DEFAULT_WINE_DEBUG_CHANNELS = "warn,err,fixme";
+    public static final String DEFAULT_WINLATOR_PATH = Environment.getExternalStorageDirectory().getPath() + "/Winlator";
+    public static final String DEFAULT_SHORTCUT_EXPORT_PATH = DEFAULT_WINLATOR_PATH + "/Shortcuts";
     private Callback<Uri> installSoundFontCallback;
     private PreloaderDialog preloaderDialog;
-    public static final String DEFAULT_EXPORT_PATH = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/Winlator/Frontend";
     private SharedPreferences preferences;
 
 	// Disable or enable True Mouse Control
 	private CheckBox cbCursorLock;
     // Disable or enable Xinput Processing
     private CheckBox cbXinputToggle;
-
-    private CheckBox cbGyroEnabled;
-    private SeekBar sbGyroXSensitivity;
-    private SeekBar sbGyroYSensitivity;
-    private SeekBar sbGyroSmoothing;
-    private SeekBar sbGyroDeadzone;
-    private CheckBox cbInvertGyroX;
-    private CheckBox cbInvertGyroY;
 
     private CheckBox cbEnableBigPictureMode;
     private CheckBox cbEnableCustomApiKey;
@@ -95,8 +91,10 @@ public class SettingsFragment extends Fragment {
     private CheckBox cbDarkMode;
     boolean isDarkMode;
 
-    private static final int REQUEST_CODE_FRONTEND_EXPORT_PATH = 1002;
+    private static final int REQUEST_CODE_WINLATOR_PATH = 1002;
+    private static final int REQUEST_CODE_SHORTCUT_EXPORT_PATH = 1003;
     private static final int REQUEST_CODE_INSTALL_SOUNDFONT = 1001;
+    private static final int REQUEST_CODE_IMPORT_PRESET = 1004;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -108,13 +106,8 @@ public class SettingsFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
         // Apply dynamic styles to all labels
         applyDynamicStylesRecursively(view);
-
-        Button btnConfigureGyro = view.findViewById(R.id.BTConfigureGyro);
-        btnConfigureGyro.setOnClickListener(v -> showGyroConfigDialog());
-
         ((AppCompatActivity)getActivity()).getSupportActionBar().setTitle(R.string.settings);
     }
 
@@ -160,87 +153,42 @@ public class SettingsFragment extends Fragment {
         cbXinputToggle = view.findViewById(R.id.CBXinputToggle);
         cbXinputToggle.setChecked(preferences.getBoolean("xinput_toggle", false));
 
-        // Initialize gyro enable checkbox
-        cbGyroEnabled = view.findViewById(R.id.CBGyroEnabled);
-        cbGyroEnabled.setChecked(preferences.getBoolean("gyro_enabled", false));
+        Button btnChooseWinlatorPath = view.findViewById(R.id.BTChooseWinlatorPath);
+        TextView tvWinlatorPath = view.findViewById(R.id.TVWinlatorPath);
 
-//        CheckBox cbProcessGyroWithLeftTrigger = view.findViewById(R.id.CBProcessGyroWithLeftTrigger);
-//        cbProcessGyroWithLeftTrigger.setChecked(preferences.getBoolean("process_gyro_with_left_trigger", false));
-
-        Spinner sbGyroTriggerButton = view.findViewById(R.id.SBGyroTriggerButton);
-        RadioGroup rgGyroMode = view.findViewById(R.id.RGyroMode);
-
-
-        int selectedMode = preferences.getInt("gyro_mode", 0); // 0 for hold, 1 for toggle
-
-        TypedArray keycodeArray = getResources().obtainTypedArray(R.array.button_keycodes);
-        int[] keycodes = new int[keycodeArray.length()];
-
-// Log the keycodes for debugging purposes
-        Log.d("SettingsFragment", "Populating keycodes array:");
-
-        for (int i = 0; i < keycodeArray.length(); i++) {
-            keycodes[i] = keycodeArray.getResourceId(i, -1); // Get the resource ID
-            if (keycodes[i] != -1) {
-                keycodes[i] = getResources().getInteger(keycodes[i]); // Fetch the actual integer value
-                Log.d("SettingsFragment", "Keycode[" + i + "] = " + keycodes[i]); // Log the populated keycode
-            } else {
-                Log.e("SettingsFragment", "Invalid keycode resource at index " + i);
-            }
-        }
-        keycodeArray.recycle(); // Always recycle TypedArray to free up resources
-
-// Now get the currently selected button from SharedPreferences
-        int selectedButton = preferences.getInt("gyro_trigger_button", KeyEvent.KEYCODE_BUTTON_L1);
-        Log.d("SettingsFragment", "Selected button keycode: " + selectedButton);
-
-// Find the index of the selectedButton in the keycodes array
-        int selectedIndex = -1;
-        for (int i = 0; i < keycodes.length; i++) {
-            if (keycodes[i] == selectedButton) {
-                selectedIndex = i;
-                break;
-            }
-        }
-
-// Ensure a valid index is found, otherwise, handle fallback
-        if (selectedIndex != -1) {
-            Log.d("SettingsFragment", "Selected button found at index: " + selectedIndex);
-            sbGyroTriggerButton.setSelection(selectedIndex);
-        } else {
-            Log.e("SettingsFragment", "Selected button not found in keycodes array!");
-            // If needed, handle the case where the button is not found (you can choose to throw an exception or show an error)
-        }
-
-
-        rgGyroMode.check(selectedMode == 0 ? R.id.RBHoldMode : R.id.RBToggleMode);
-
-        // Initialize the "Configure Analog Sticks" button
-        Button btConfigureAnalogSticks = view.findViewById(R.id.BTConfigureAnalogSticks);
-        btConfigureAnalogSticks.setOnClickListener(v -> showAnalogStickConfigDialog());
-
-
-        // Configure Frontend Export Path button
-
-        Button btnChooseFrontendExportPath = view.findViewById(R.id.BTChooseFrontendExportPath);
-        TextView tvFrontendExportPath = view.findViewById(R.id.TVFrontendExportPath);
-
-        // Get the saved export path from SharedPreferences or use the default
-        String savedUriString = preferences.getString("frontend_export_uri", null);
+        String savedUriString = preferences.getString("winlator_path_uri", null);
         if (savedUriString == null) {
             // No saved path, set default path
-            tvFrontendExportPath.setText(DEFAULT_EXPORT_PATH);
+            tvWinlatorPath.setText(DEFAULT_WINLATOR_PATH);
         } else {
             // Parse and display the saved URI path
             Uri savedUri = Uri.parse(savedUriString);
             String displayPath = FileUtils.getFilePathFromUri(getContext(), savedUri);
-            tvFrontendExportPath.setText(displayPath != null ? displayPath : savedUriString);
+            tvWinlatorPath.setText(displayPath != null ? displayPath : savedUriString);
         }
 
-        // Set the click listener for the "Choose Frontend Export Path" button
-        btnChooseFrontendExportPath.setOnClickListener(v -> {
+        btnChooseWinlatorPath.setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE); // Launch File Picker for directory selection
-            startActivityForResult(intent, REQUEST_CODE_FRONTEND_EXPORT_PATH);
+            startActivityForResult(intent, REQUEST_CODE_WINLATOR_PATH);
+        });
+
+        Button btChooseShortcutExportPath = view.findViewById(R.id.BTChooseShortcutExportPath);
+        TextView tvShortcutExportPath = view.findViewById(R.id.TVShortcutExportPath);
+
+        savedUriString = preferences.getString("shortcuts_export_path_uri", null);
+
+        if (savedUriString != null) {
+            Uri savedUri = Uri.parse(savedUriString);
+            String displayPath = FileUtils.getFilePathFromUri(context, savedUri);
+            tvShortcutExportPath.setText(displayPath != null ? displayPath : savedUriString);
+        }
+        else {
+            tvShortcutExportPath.setText(DEFAULT_SHORTCUT_EXPORT_PATH);
+        }
+
+        btChooseShortcutExportPath.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+            startActivityForResult(intent, REQUEST_CODE_SHORTCUT_EXPORT_PATH);
         });
 
         final Spinner sBox64Preset = view.findViewById(R.id.SBox64Preset);
@@ -332,16 +280,6 @@ public class SettingsFragment extends Fragment {
         });
         sbCursorSpeed.setProgress((int)(preferences.getFloat("cursor_speed", 1.0f) * 100));
 
-        final RadioGroup rgTriggerType = view.findViewById(R.id.RGTriggerType);
-        final View btHelpTriggerMode = view.findViewById(R.id.BTHelpTriggerMode);
-        List<Integer> triggerRbIds = List.of(R.id.RBTriggerIsButton, R.id.RBTriggerIsAxis, R.id.RBTriggerIsMixed);
-        int triggerType = preferences.getInt("trigger_type", ExternalController.TRIGGER_IS_AXIS);
-
-        if (triggerType >= 0 && triggerType < triggerRbIds.size()) {
-            ((RadioButton) (rgTriggerType.findViewById(triggerRbIds.get(triggerType)))).setChecked(true);
-        }
-        btHelpTriggerMode.setOnClickListener(v -> AppUtils.showHelpBox(context, v, R.string.help_trigger_mode));
-
         final CheckBox cbEnableFileProvider = view.findViewById(R.id.CBEnableFileProvider);
         final View btHelpFileProvider = view.findViewById(R.id.BTHelpFileProvider);
 
@@ -362,8 +300,6 @@ public class SettingsFragment extends Fragment {
             ContentDialog.confirm(context, R.string.do_you_want_to_reinstall_imagefs, () -> ImageFsInstaller.installFromAssets((MainActivity) getActivity()));
         });
 
-
-        int finalSelectedIndex = selectedIndex;
         view.findViewById(R.id.BTConfirm).setOnClickListener((v) -> {
             SharedPreferences.Editor editor = preferences.edit();
 
@@ -375,7 +311,6 @@ public class SettingsFragment extends Fragment {
             editor.putFloat("cursor_speed", sbCursorSpeed.getProgress() / 100.0f);
             editor.putBoolean("enable_wine_debug", cbEnableWineDebug.isChecked());
             editor.putBoolean("enable_box64_logs", cbEnableBox64Logs.isChecked());
-            editor.putInt("trigger_type", triggerRbIds.indexOf(rgTriggerType.getCheckedRadioButtonId()));
             editor.putBoolean("cursor_lock", cbCursorLock.isChecked()); // Save cursor lock state
             editor.putBoolean("xinput_toggle", cbXinputToggle.isChecked()); // Save xinput toggle state
             editor.putBoolean("enable_file_provider", cbEnableFileProvider.isChecked());
@@ -383,20 +318,6 @@ public class SettingsFragment extends Fragment {
             editor.putBoolean("share_android_clipboard", cbShareClipboard.isChecked());
 
             editor.putString("downloadable_contents_url", etDownloadableContentsURL.getText().toString());
-
-
-            // Save gyro settings
-            editor.putBoolean("gyro_enabled", cbGyroEnabled.isChecked());
-//            editor.putBoolean("process_gyro_with_left_trigger", cbProcessGyroWithLeftTrigger.isChecked());
-
-            int selectedKeycode = keycodes[sbGyroTriggerButton.getSelectedItemPosition()];
-
-// Save the selected keycode to preferences
-            editor.putInt("gyro_trigger_button", selectedKeycode);
-
-            editor.putInt("gyro_mode", rgGyroMode.getCheckedRadioButtonId() == R.id.RBHoldMode ? 0 : 1);
-
-
 
             if (!wineDebugChannels.isEmpty()) {
                 editor.putString("wine_debug_channels", String.join(",", wineDebugChannels));
@@ -468,12 +389,6 @@ public class SettingsFragment extends Fragment {
         // Inputs tab labels
         TextView xServerLabel = view.findViewById(R.id.TVXServer);
         applyFieldSetLabelStyle(xServerLabel, isDarkMode);
-
-        TextView gyroSettingsLabel = view.findViewById(R.id.TVGyroSettings);
-        applyFieldSetLabelStyle(gyroSettingsLabel, isDarkMode);
-
-        TextView gameControllerLabel = view.findViewById(R.id.TVGameControllerLabel);
-        applyFieldSetLabelStyle(gameControllerLabel, isDarkMode);
 
         // Advanced tab labels
         TextView logsLabel = view.findViewById(R.id.TVLogs);
@@ -581,12 +496,29 @@ public class SettingsFragment extends Fragment {
             });
         };
 
+        Callback<String> onExportPreset = (String prefix) -> {
+            final String presetId = Box64PresetManager.getSpinnerSelectedId(spinners.get(prefix));
+            if (!presetId.startsWith(Box64Preset.CUSTOM)) {
+                AppUtils.showToast(context, "Cannot export this preset");
+                return;
+            }
+            getActivity().runOnUiThread(() ->  {
+                Box64PresetManager.exportPreset(prefix, context, presetId);
+            });
+        };
+
+        Callback<String> onImportPreset = (String prefix) -> {
+          openFile(REQUEST_CODE_IMPORT_PRESET);
+        };
+
         updateSpinner.call("box64");
 
         view.findViewById(R.id.BTAddBox64Preset).setOnClickListener((v) -> onAddPreset.call("box64"));
         view.findViewById(R.id.BTEditBox64Preset).setOnClickListener((v) -> onEditPreset.call("box64"));
         view.findViewById(R.id.BTDuplicateBox64Preset).setOnClickListener((v) -> onDuplicatePreset.call("box64"));
         view.findViewById(R.id.BTRemoveBox64Preset).setOnClickListener((v) -> onRemovePreset.call("box64"));
+        view.findViewById(R.id.BTExportBox64Preset).setOnClickListener((v) -> onExportPreset.call("box64"));
+        view.findViewById(R.id.BTImportBox64Preset).setOnClickListener((v) -> onImportPreset.call("box64"));
     }
 
 
@@ -657,206 +589,6 @@ public class SettingsFragment extends Fragment {
         editor.apply();
     }
 
-    private void showGyroConfigDialog() {
-        View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.gyro_config_dialog, null);
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setView(dialogView);
-        builder.setTitle("Gyroscope Configuration");
-
-        // Initialize InputControlsView and configure it for displaying the stick
-        InputControlsView inputControlsView = new InputControlsView(getContext(), true);
-        inputControlsView.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        inputControlsView.setEditMode(false);  // Disable edit mode
-
-        // Initialize the stick element and set its type to STICK
-        inputControlsView.initializeStickElement(600, 250, 2.0f);
-        inputControlsView.getStickElement().setType(ControlElement.Type.STICK); // Set the type to STICK
-
-
-        // Add the InputControlsView to the placeholder in your dialog layout
-        FrameLayout placeholder = dialogView.findViewById(R.id.stick_placeholder);
-        placeholder.addView(inputControlsView);
-
-        // Redraw the stick in InputControlsView
-        inputControlsView.invalidate();
-
-        // Initialize the "Reset Center" button
-        Button btnResetCenter = dialogView.findViewById(R.id.btnResetCenter);
-        btnResetCenter.setOnClickListener(v -> {
-            // Reset the stick element's position to the center
-            inputControlsView.resetStickPosition();
-            inputControlsView.invalidate();  // Redraw the stick
-        });
-
-        // Initialize the UI elements in the dialog
-        SeekBar sbGyroXSensitivity = dialogView.findViewById(R.id.SBGyroXSensitivity);
-        SeekBar sbGyroYSensitivity = dialogView.findViewById(R.id.SBGyroYSensitivity);
-        SeekBar sbGyroSmoothing = dialogView.findViewById(R.id.SBGyroSmoothing);
-        SeekBar sbGyroDeadzone = dialogView.findViewById(R.id.SBGyroDeadzone);
-        CheckBox cbInvertGyroX = dialogView.findViewById(R.id.CBInvertGyroX);
-        CheckBox cbInvertGyroY = dialogView.findViewById(R.id.CBInvertGyroY);
-        TextView tvGyroXSensitivity = dialogView.findViewById(R.id.TVGyroXSensitivity);
-        TextView tvGyroYSensitivity = dialogView.findViewById(R.id.TVGyroYSensitivity);
-        TextView tvGyroSmoothing = dialogView.findViewById(R.id.TVGyroSmoothing);
-        TextView tvGyroDeadzone = dialogView.findViewById(R.id.TVGyroDeadzone);
-
-
-        // Load current preferences
-        sbGyroXSensitivity.setProgress((int) (preferences.getFloat("gyro_x_sensitivity", 1.0f) * 100));
-        sbGyroYSensitivity.setProgress((int) (preferences.getFloat("gyro_y_sensitivity", 1.0f) * 100));
-        sbGyroSmoothing.setProgress((int) (preferences.getFloat("gyro_smoothing", 0.9f) * 100));
-        sbGyroDeadzone.setProgress((int) (preferences.getFloat("gyro_deadzone", 0.05f) * 100));
-        cbInvertGyroX.setChecked(preferences.getBoolean("invert_gyro_x", false));
-        cbInvertGyroY.setChecked(preferences.getBoolean("invert_gyro_y", false));
-
-        // Update text views for SeekBars
-        tvGyroXSensitivity.setText("X Sensitivity: " + sbGyroXSensitivity.getProgress() + "%");
-        tvGyroYSensitivity.setText("Y Sensitivity: " + sbGyroYSensitivity.getProgress() + "%");
-        tvGyroSmoothing.setText("Smoothing: " + sbGyroSmoothing.getProgress() + "%");
-        tvGyroDeadzone.setText("Deadzone: " + sbGyroDeadzone.getProgress() + "%");
-
-        // Listeners for SeekBars
-        sbGyroXSensitivity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                tvGyroXSensitivity.setText("X Sensitivity: " + progress + "%");
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
-        sbGyroYSensitivity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                tvGyroYSensitivity.setText("Y Sensitivity: " + progress + "%");
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
-        sbGyroSmoothing.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                tvGyroSmoothing.setText("Smoothing: " + progress + "%");
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
-        sbGyroDeadzone.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                tvGyroDeadzone.setText("Deadzone: " + progress + "%");
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
-        // SensorManager to handle gyroscope input and affect only the thumbstick position within a fixed radius
-        SensorManager sensorManager = (SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE);
-        Sensor gyroscopeSensor = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
-
-// Define variables for smoothing and deadzone
-        final float[] smoothGyroX = {0};
-        final float[] smoothGyroY = {0};
-        float smoothingFactor = preferences.getFloat("gyro_smoothing", 0.9f);  // User-defined smoothing factor
-        float gyroDeadzone = preferences.getFloat("gyro_deadzone", 0.05f);      // User-defined deadzone
-        boolean invertGyroX = preferences.getBoolean("invert_gyro_x", false);   // User-defined inversion for X axis
-        boolean invertGyroY = preferences.getBoolean("invert_gyro_y", false);   // User-defined inversion for Y axis
-        float gyroSensitivityX = preferences.getFloat("gyro_x_sensitivity", 1.0f); // User-defined sensitivity for X axis
-        float gyroSensitivityY = preferences.getFloat("gyro_y_sensitivity", 1.0f); // User-defined sensitivity for Y axis
-
-        SensorEventListener gyroListener = new SensorEventListener() {
-            @Override
-            public void onSensorChanged(SensorEvent event) {
-                float rawGyroX = event.values[0];  // Gyroscope X axis value
-                float rawGyroY = event.values[1];  // Gyroscope Y axis value
-
-                // Apply deadzone
-                if (Math.abs(rawGyroX) < gyroDeadzone) rawGyroX = 0;
-                if (Math.abs(rawGyroY) < gyroDeadzone) rawGyroY = 0;
-
-                // Apply inversion
-                if (invertGyroX) rawGyroX = -rawGyroX;
-                if (invertGyroY) rawGyroY = -rawGyroY;
-
-                // Apply sensitivity
-                rawGyroX *= gyroSensitivityX;
-                rawGyroY *= gyroSensitivityY;
-
-                // Apply smoothing (exponential smoothing)
-                smoothGyroX[0] = smoothGyroX[0] * smoothingFactor + rawGyroX * (1 - smoothingFactor);
-                smoothGyroY[0] = smoothGyroY[0] * smoothingFactor + rawGyroY * (1 - smoothingFactor);
-
-                // Define the outer stick's center as a fixed point (outer circle center)
-                int stickCenterX = inputControlsView.getStickElement().getX(); // Base stick X (center of outer circle)
-                int stickCenterY = inputControlsView.getStickElement().getY(); // Base stick Y (center of outer circle)
-                int stickRadius = 100;  // Example radius (adjust as needed)
-
-                // Calculate the new thumbstick (inner circle) position based on the smoothed gyro data
-                float newX = inputControlsView.getStickElement().getCurrentPosition().x + smoothGyroX[0];
-                float newY = inputControlsView.getStickElement().getCurrentPosition().y + smoothGyroY[0];
-
-                // Calculate the distance between the new thumbstick position and the outer circle center
-                float deltaX = newX - stickCenterX;
-                float deltaY = newY - stickCenterY;
-                float distance = (float) Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-                // Constrain the inner circle within the outer circle's radius
-                if (distance > stickRadius) {
-                    float scaleFactor = stickRadius / distance;
-                    newX = stickCenterX + deltaX * scaleFactor;
-                    newY = stickCenterY + deltaY * scaleFactor;
-                }
-
-                // Update the thumbstick (inner circle) position, but keep the outer circle fixed
-                inputControlsView.updateStickPosition(newX, newY);
-
-                // Redraw InputControlsView to reflect the new thumbstick position
-                inputControlsView.invalidate();
-            }
-
-            @Override
-            public void onAccuracyChanged(Sensor sensor, int accuracy) {}
-        };
-
-        sensorManager.registerListener(gyroListener, gyroscopeSensor, SensorManager.SENSOR_DELAY_GAME);
-
-        // Set up the dialog buttons
-        builder.setPositiveButton("OK", (dialog, which) -> {
-            SharedPreferences.Editor editor = preferences.edit();
-            editor.putFloat("gyro_x_sensitivity", sbGyroXSensitivity.getProgress() / 100.0f);
-            editor.putFloat("gyro_y_sensitivity", sbGyroYSensitivity.getProgress() / 100.0f);
-            editor.putFloat("gyro_smoothing", sbGyroSmoothing.getProgress() / 100.0f);
-            editor.putFloat("gyro_deadzone", sbGyroDeadzone.getProgress() / 100.0f);
-            editor.putBoolean("invert_gyro_x", cbInvertGyroX.isChecked());
-            editor.putBoolean("invert_gyro_y", cbInvertGyroY.isChecked());
-            editor.apply();
-        });
-
-        builder.setNegativeButton("Cancel", null);
-
-        // Show the dialog
-        builder.create().show();
-    }
-
-
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -865,12 +597,14 @@ public class SettingsFragment extends Fragment {
             Uri uri = data.getData();
 
             if (uri != null) {
+
+                SharedPreferences.Editor editor = preferences.edit();
+
                 switch (requestCode) {
-                    // Case for FilePicker to select frontend export path
-                    case REQUEST_CODE_FRONTEND_EXPORT_PATH:
+
+                    case REQUEST_CODE_WINLATOR_PATH:
                         // Save the selected URI as a string in SharedPreferences
-                        SharedPreferences.Editor editor = preferences.edit();
-                        editor.putString("frontend_export_uri", uri.toString());
+                        editor.putString("winlator_path_uri", uri.toString());
                         editor.apply();
 
                         // Take persistable URI permission
@@ -888,9 +622,33 @@ public class SettingsFragment extends Fragment {
                         String fullPath = FileUtils.getFilePathFromUri(getContext(), uri);
 
                         // Update the TextView with the absolute path or URI string if conversion fails
-                        TextView tvFrontendExportPath = getView().findViewById(R.id.TVFrontendExportPath);
-                        tvFrontendExportPath.setText(fullPath != null ? fullPath : uri.toString());
+                        TextView tvWinlatorPath = getView().findViewById(R.id.TVWinlatorPath);
+                        tvWinlatorPath.setText(fullPath != null ? fullPath : uri.toString());
                         break;
+
+                    case REQUEST_CODE_SHORTCUT_EXPORT_PATH:
+                        editor.putString("shortcuts_export_path_uri", uri.toString());
+                        editor.apply();
+
+                        // Take persistable URI permission
+                        try {
+                            // Take persistable URI permission with explicit flags
+                            requireContext().getContentResolver().takePersistableUriPermission(
+                                    uri,
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                            );
+                        } catch (SecurityException e) {
+                            AppUtils.showToast(getContext(), "Unable to take persistable permissions: " + e.getMessage());
+                        }
+
+                        // Convert the URI to an absolute path and display it
+                        String path = FileUtils.getFilePathFromUri(getContext(), uri);
+
+                        // Update the TextView with the absolute path or URI string if conversion fails
+                        TextView tvShortcutExportPath = getView().findViewById(R.id.TVShortcutExportPath);
+                        tvShortcutExportPath.setText(path != null ? path : uri.toString());
+
+
 
                     // Case for installing a SoundFont
                     case REQUEST_CODE_INSTALL_SOUNDFONT:
@@ -905,7 +663,16 @@ public class SettingsFragment extends Fragment {
                         }
                         break;
 
-                    // Add future cases here for other request codes...
+                    case REQUEST_CODE_IMPORT_PRESET:
+                        try {
+                            Spinner sBox64Preset = getView().findViewById(R.id.SBox64Preset);
+                            InputStream is = getActivity().getContentResolver().openInputStream(uri);
+                            Box64PresetManager.importPreset("box64", getContext(), is);
+                            Box64PresetManager.loadSpinner("box64", sBox64Preset, preferences.getString("box64_preset", Box64Preset.COMPATIBILITY));
+                        } catch (FileNotFoundException e) {
+                        }
+
+                        // Add future cases here for other request codes...
                     default:
                         break;
                 }
@@ -933,164 +700,4 @@ public class SettingsFragment extends Fragment {
         // Clear the temporary directory after moving
         FileUtils.clear(sourceDir);
     }
-
-    private void showAnalogStickConfigDialog() {
-        // Inflate the dialog layout
-        LayoutInflater inflater = LayoutInflater.from(getContext());
-        View dialogView = inflater.inflate(R.layout.analog_stick_config_dialog, null);
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setView(dialogView);
-        builder.setTitle("Configure Analog Sticks");
-        builder.setCancelable(false);
-
-        // Initialize UI elements
-        SeekBar sbLeftDeadzone = dialogView.findViewById(R.id.SBLeftDeadzone);
-        TextView tvLeftDeadzone = dialogView.findViewById(R.id.TVLeftDeadzone);
-
-        SeekBar sbLeftSensitivity = dialogView.findViewById(R.id.SBLeftSensitivity);
-        TextView tvLeftSensitivity = dialogView.findViewById(R.id.TVLeftSensitivity);
-
-        SeekBar sbRightDeadzone = dialogView.findViewById(R.id.SBRightDeadzone);
-        TextView tvRightDeadzone = dialogView.findViewById(R.id.TVRightDeadzone);
-
-        SeekBar sbRightSensitivity = dialogView.findViewById(R.id.SBRightSensitivity);
-        TextView tvRightSensitivity = dialogView.findViewById(R.id.TVRightSensitivity);
-
-        CheckBox cbInvertLeftX = dialogView.findViewById(R.id.CBInvertLeftStickX);
-        CheckBox cbInvertLeftY = dialogView.findViewById(R.id.CBInvertLeftStickY);
-        CheckBox cbInvertRightX = dialogView.findViewById(R.id.CBInvertRightStickX);
-        CheckBox cbInvertRightY = dialogView.findViewById(R.id.CBInvertRightStickY);
-
-        // New checkbox for square deadzone
-        CheckBox cbLeftStickSquareDeadzone = dialogView.findViewById(R.id.CBLeftStickSquareDeadzone);
-
-        // Load current preferences
-        float currentDeadzoneLeft = preferences.getFloat(PreferenceKeys.DEADZONE_LEFT, 0.1f) * 100; // Convert to percentage
-        float currentDeadzoneRight = preferences.getFloat(PreferenceKeys.DEADZONE_RIGHT, 0.1f) * 100;
-        float currentSensitivityLeft = preferences.getFloat(PreferenceKeys.SENSITIVITY_LEFT, 1.0f) * 100; // Convert to percentage
-        float currentSensitivityRight = preferences.getFloat(PreferenceKeys.SENSITIVITY_RIGHT, 1.0f) * 100;
-        boolean squareDeadzoneLeft = preferences.getBoolean(PreferenceKeys.SQUARE_DEADZONE_LEFT, false);
-
-        boolean invertLeftX = preferences.getBoolean(PreferenceKeys.INVERT_LEFT_X, false);
-        boolean invertLeftY = preferences.getBoolean(PreferenceKeys.INVERT_LEFT_Y, false);
-        boolean invertRightX = preferences.getBoolean(PreferenceKeys.INVERT_RIGHT_X, false);
-        boolean invertRightY = preferences.getBoolean(PreferenceKeys.INVERT_RIGHT_Y, false);
-
-        // Set initial values
-        sbLeftDeadzone.setProgress((int) currentDeadzoneLeft);
-        tvLeftDeadzone.setText("Deadzone: " + sbLeftDeadzone.getProgress() + "%");
-
-        sbLeftSensitivity.setProgress((int) currentSensitivityLeft);
-        tvLeftSensitivity.setText("Sensitivity: " + sbLeftSensitivity.getProgress() + "%");
-
-        sbRightDeadzone.setProgress((int) currentDeadzoneRight);
-        tvRightDeadzone.setText("Deadzone: " + sbRightDeadzone.getProgress() + "%");
-
-        sbRightSensitivity.setProgress((int) currentSensitivityRight);
-        tvRightSensitivity.setText("Sensitivity: " + sbRightSensitivity.getProgress() + "%");
-
-        cbInvertLeftX.setChecked(invertLeftX);
-        cbInvertLeftY.setChecked(invertLeftY);
-        cbInvertRightX.setChecked(invertRightX);
-        cbInvertRightY.setChecked(invertRightY);
-
-        cbLeftStickSquareDeadzone.setChecked(squareDeadzoneLeft);
-
-        // Set listeners to update TextViews as SeekBars change
-        sbLeftDeadzone.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                tvLeftDeadzone.setText("Deadzone: " + progress + "%");
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
-        sbLeftSensitivity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                tvLeftSensitivity.setText("Sensitivity: " + progress + "%");
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
-        sbRightDeadzone.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                tvRightDeadzone.setText("Deadzone: " + progress + "%");
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
-        sbRightSensitivity.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                tvRightSensitivity.setText("Sensitivity: " + progress + "%");
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {}
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
-        // Set up the dialog buttons
-        builder.setPositiveButton("Save", (dialog, which) -> {
-            // Retrieve and save the updated settings
-            float newDeadzoneLeft = sbLeftDeadzone.getProgress() / 100.0f;
-            float newDeadzoneRight = sbRightDeadzone.getProgress() / 100.0f;
-            float newSensitivityLeft = sbLeftSensitivity.getProgress() / 100.0f;
-            float newSensitivityRight = sbRightSensitivity.getProgress() / 100.0f;
-
-            boolean newInvertLeftX = cbInvertLeftX.isChecked();
-            boolean newInvertLeftY = cbInvertLeftY.isChecked();
-            boolean newInvertRightX = cbInvertRightX.isChecked();
-            boolean newInvertRightY = cbInvertRightY.isChecked();
-
-            // Save to SharedPreferences
-            SharedPreferences.Editor editor = preferences.edit();
-            editor.putFloat(PreferenceKeys.DEADZONE_LEFT, newDeadzoneLeft);
-            editor.putFloat(PreferenceKeys.DEADZONE_RIGHT, newDeadzoneRight);
-            editor.putFloat(PreferenceKeys.SENSITIVITY_LEFT, newSensitivityLeft);
-            editor.putFloat(PreferenceKeys.SENSITIVITY_RIGHT, newSensitivityRight);
-            editor.putBoolean(PreferenceKeys.INVERT_LEFT_X, newInvertLeftX);
-            editor.putBoolean(PreferenceKeys.INVERT_LEFT_Y, newInvertLeftY);
-            editor.putBoolean(PreferenceKeys.INVERT_RIGHT_X, newInvertRightX);
-            editor.putBoolean(PreferenceKeys.INVERT_RIGHT_Y, newInvertRightY);
-            editor.putBoolean(PreferenceKeys.SQUARE_DEADZONE_LEFT, cbLeftStickSquareDeadzone.isChecked());
-            editor.apply();
-
-            // Optionally, notify ExternalController instances to reload preferences
-            // If you have a central manager or singleton, you can call a method here
-            // For example:
-            // ExternalControllerManager.getInstance().reloadPreferences();
-
-            // For this example, we'll assume ExternalController instances listen to preference changes
-        });
-
-        builder.setNegativeButton("Cancel", null);
-
-        // Create and show the dialog
-        AlertDialog dialog = builder.create();
-        dialog.show();
-    }
-
-
-
 }

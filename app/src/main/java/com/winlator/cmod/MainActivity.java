@@ -61,57 +61,12 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private int selectedProfileId;
     private SharedPreferences sharedPreferences;
     private ContainerManager containerManager;
-
     private boolean isDarkMode;
-
-//    private void cleanupErroneousContainer() {
-//        // Define the specific path to the erroneous directory
-//        File erroneousDir = new File(Environment.getExternalStorageDirectory(), "Android/data/com.winlator/files/Backups");
-//
-//        // Log the contents of the directory
-//        logSpecificDirectoryContents(erroneousDir);
-//
-//        // Check if the directory exists and delete it if found
-//        if (erroneousDir.exists() && erroneousDir.isDirectory()) {
-//            if (FileUtils.delete(erroneousDir)) {
-//                Log.i("MainActivity", "Successfully deleted erroneous container directory: " + erroneousDir.getPath());
-//                Toast.makeText(this, "Erroneous container directory deleted.", Toast.LENGTH_SHORT).show();
-//            } else {
-//                Log.e("MainActivity", "Failed to delete erroneous container directory: " + erroneousDir.getPath());
-//                Toast.makeText(this, "Failed to delete erroneous container directory.", Toast.LENGTH_SHORT).show();
-//            }
-//        } else {
-//            Log.i("MainActivity", "Erroneous container directory not found: " + erroneousDir.getPath());
-//            Toast.makeText(this, "Erroneous container directory not found.", Toast.LENGTH_SHORT).show();
-//        }
-//    }
-//
-//    // Method to log the contents of a specific directory
-//    private void logSpecificDirectoryContents(File directory) {
-//        if (directory == null || !directory.isDirectory()) {
-//            Log.e("MainActivity", "Provided path is not a directory: " + directory);
-//            return;
-//        }
-//
-//        Log.d("MainActivity", "Contents of directory: " + directory.getAbsolutePath());
-//        File[] files = directory.listFiles();
-//        if (files != null) {
-//            for (File file : files) {
-//                Log.d("MainActivity", (file.isDirectory() ? "Directory: " : "File: ") + file.getName());
-//            }
-//        } else {
-//            Log.d("MainActivity", "No files found in directory: " + directory.getAbsolutePath());
-//        }
-//    }
-
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-
-//        cleanupErroneousContainer();
 
         // Get shared preferences
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -216,8 +171,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 return;
             }
         }
-
-        show(new ContainersFragment(), true);  // Pass `true` to trigger the reverse animation
+        if (!editInputControls)
+            show(new ContainersFragment(), true);  // Pass `true` to trigger the reverse animation
+        else
+            super.onBackPressed();
     }
 
     private boolean requestAppPermissions() {
@@ -240,7 +197,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     @Override
     public boolean onOptionsItemSelected(MenuItem menuItem) {
         if (menuItem.getItemId() == android.R.id.home) {
-            // Toggle the drawer
+            if (editInputControls) {
+                onBackPressed();
+                return true;
+            }
+
             if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
                 drawerLayout.closeDrawer(GravityCompat.START);
             } else {

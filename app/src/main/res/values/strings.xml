@@ -271,7 +271,7 @@
     <string name="as_button">Is Button</string>
     <string name="as_axis">Is Axis</string>
     <string name="both">Both</string>
-    <string name="trigger_type">Trigger Type</string>
+    <string name="trigger_type">Type</string>
     <string name="experimental">Experimental</string>
     <string name="glibc_exp_edition">Based On</string>
     <string name="enabled_async">Enable Async</string>

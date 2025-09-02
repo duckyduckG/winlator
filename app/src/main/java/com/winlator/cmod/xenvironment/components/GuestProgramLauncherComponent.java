@@ -18,9 +18,11 @@ import com.winlator.cmod.contents.ContentsManager;
 import com.winlator.cmod.core.Callback;
 import com.winlator.cmod.core.EnvVars;
 import com.winlator.cmod.core.FileUtils;
+import com.winlator.cmod.core.KeyValueSet;
 import com.winlator.cmod.core.ProcessHelper;
 import com.winlator.cmod.core.TarCompressorUtils;
 import com.winlator.cmod.core.WineInfo;
+import com.winlator.cmod.fexcore.FEXCoreManager;
 import com.winlator.cmod.xconnector.UnixSocketConfig;
 import com.winlator.cmod.xenvironment.EnvironmentComponent;
 import com.winlator.cmod.xenvironment.ImageFs;
@@ -38,6 +40,7 @@ public class GuestProgramLauncherComponent extends EnvironmentComponent {
     private EnvVars envVars;
     private WineInfo wineInfo;
     private String box64Preset = Box64Preset.COMPATIBILITY;
+    private KeyValueSet fexConfig;
     private Callback<Integer> terminationCallback;
     private static final Object lock = new Object();
     private final ContentsManager contentsManager;
@@ -54,6 +57,10 @@ public class GuestProgramLauncherComponent extends EnvironmentComponent {
 
     public Container getContainer() { return this.container; }
     public void setContainer(Container container) { this.container = container; }
+
+    public void setFEXConfig(KeyValueSet fexConfig) {
+        this.fexConfig = fexConfig;
+    }
 
     private void extractBox64Files() {
         ImageFs imageFs = environment.getImageFs();
@@ -94,11 +101,10 @@ public class GuestProgramLauncherComponent extends EnvironmentComponent {
         boolean containerDataChanged = false;
 
         String wowbox64Version = container.getBox64Version();
-        String fexcoreVersion = container.getFEXCoreVersion();
+        String fexcoreVersion = fexConfig.get("version");
 
         if (shortcut != null) {
             wowbox64Version = shortcut.getExtra("box64Version", shortcut.container.getBox64Version());
-            fexcoreVersion = shortcut.getExtra("fexcoreVersion", shortcut.container.getFEXCoreVersion());
         }
 
         Log.d("GuestProgramLauncherComponent", "box64Version in use: " + wowbox64Version);
@@ -247,6 +253,8 @@ public class GuestProgramLauncherComponent extends EnvironmentComponent {
 
         if (envVars.get("BOX64_MMAP32").equals("1") && !wineInfo.isArm64EC())
             envVars.put("WRAPPER_DISABLE_PLACED", "1");
+
+        FEXCoreManager.loadFEXCoreEnvVars(fexConfig, envVars);
 
         // Setting up essential environment variables for Wine
         envVars.put("HOME", imageFs.home_path);
