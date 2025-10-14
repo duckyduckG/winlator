@@ -49,20 +49,24 @@
                         <ImageButton
                             style="@style/ListMenuButton"
                             android:id="@+id/BTAddBox64Preset"
+                            android:tooltipText="Add"
                             android:src="@drawable/icon_add" />
 
                         <ImageButton
                             style="@style/ListMenuButton"
                             android:id="@+id/BTEditBox64Preset"
+                            android:tooltipText="Edit"
                             android:src="@drawable/icon_edit" />
 
                         <ImageButton
                             style="@style/ListMenuButton"
+                            android:tooltipText="Duplicate"
                             android:id="@+id/BTDuplicateBox64Preset"
                             android:src="@drawable/icon_duplicate" />
 
                         <ImageButton
                             style="@style/ListMenuButton"
+                            android:tooltipText="Remove"
                             android:id="@+id/BTRemoveBox64Preset"
                             android:layout_marginRight="0dp"
                             android:src="@drawable/icon_remove" />
@@ -70,11 +74,13 @@
                         <ImageButton
                             style="@style/ListMenuButton"
                             android:id="@+id/BTExportBox64Preset"
+                            android:tooltipText="Export"
                             android:layout_marginRight="0dp"
                             android:src="@drawable/icon_export" />
 
                         <ImageButton
                             style="@style/ListMenuButton"
+                            android:tooltipText="Import"
                             android:id="@+id/BTImportBox64Preset"
                             android:layout_marginRight="0dp"
                             android:src="@drawable/icon_popup_menu_download" />

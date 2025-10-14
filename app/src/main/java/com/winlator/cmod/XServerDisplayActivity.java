@@ -1478,7 +1478,10 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             envVars.put("WRAPPER_VMEM_MAX_SIZE", maxDeviceMemory);
 
         String presentMode = graphicsDriverConfig.get("presentMode");
-        envVars.put("MESA_VK_WSI_PRESENT_MODE", presentMode);
+        envVars.put("WRAPPER_PRESENT_MODE", presentMode);
+
+        String resourceType = graphicsDriverConfig.get("resourceType");
+        envVars.put("WRAPPER_RESOURCE_TYPE", resourceType);
 
         String syncFrame = graphicsDriverConfig.get("syncFrame");
         if (syncFrame.equals("1"))
@@ -1486,6 +1489,9 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         String disablePresentWait = graphicsDriverConfig.get("disablePresentWait");
         envVars.put("WRAPPER_DISABLE_PRESENT_WAIT", disablePresentWait);
+
+        String blit = graphicsDriverConfig.get("blit");
+        envVars.put("WRAPPER_BLIT", blit);
 
         if (!vkbasaltConfig.isEmpty()) {
             envVars.put("ENABLE_VKBASALT", "1");

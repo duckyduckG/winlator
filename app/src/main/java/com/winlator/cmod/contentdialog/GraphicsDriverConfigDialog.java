@@ -34,9 +34,11 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
     private MultiSelectionComboBox mscAvailableExtensions;
     private Spinner sMaxDeviceMemory;
     private Spinner sPresentMode;
+    private Spinner sResourceType;
     private CheckBox cbAdrenotoolsTurnip;
     private CheckBox cbSyncFrame;
     private CheckBox cbDisablePresentWait;
+    private CheckBox cbEnableBlit;
     private static String selectedVulkanVersion;
     private static String selectedVersion;
     private static String blacklistedExtensions = "";
@@ -45,6 +47,10 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
     private static String isSyncFrame;
     private static String isDisablePresentWait;
     private static String selectedPresentMode;
+    private static String selectedResourceType;
+
+    private static String enableBlit;
+
 
     public static HashMap<String, String> parseGraphicsDriverConfig(String graphicsDriverConfig) {
         HashMap<String, String> mappedConfig = new HashMap<>();
@@ -82,7 +88,16 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
     }
 
     public static String writeGraphicsDriverConfig() {
-        String graphicsDriverConfig = "vulkanVersion=" + selectedVulkanVersion + ";" + "version=" + selectedVersion + ";" + "blacklistedExtensions=" + blacklistedExtensions + ";" + "maxDeviceMemory=" + StringUtils.parseNumber(selectedDeviceMemory) + ";" + "adrenotoolsTurnip=" + isAdrenotoolsTurnip + ";" + "presentMode=" + selectedPresentMode + ";" + "syncFrame=" + isSyncFrame + ";" + "disablePresentWait=" + isDisablePresentWait;
+        String graphicsDriverConfig = "vulkanVersion=" + selectedVulkanVersion + ";" +
+                "version=" + selectedVersion + ";" +
+                "blacklistedExtensions=" + blacklistedExtensions + ";" +
+                "maxDeviceMemory=" + StringUtils.parseNumber(selectedDeviceMemory) + ";" +
+                "adrenotoolsTurnip=" + isAdrenotoolsTurnip + ";" +
+                "presentMode=" + selectedPresentMode + ";" +
+                "syncFrame=" + isSyncFrame + ";" +
+                "disablePresentWait=" + isDisablePresentWait + ";" +
+                "resourceType=" + selectedResourceType + ";" +
+                "blit=" + enableBlit;
         Log.i(TAG, "Written config " + graphicsDriverConfig);
         return graphicsDriverConfig;
     }
@@ -108,9 +123,11 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
         mscAvailableExtensions = findViewById(R.id.MSCAvailableExtensions);
         sPresentMode = findViewById(R.id.SGraphicsDriverPresentMode);
         sMaxDeviceMemory = findViewById(R.id.SGraphicsDriverMaxDeviceMemory);
+        sResourceType = findViewById(R.id.SGraphicsDriverResourceType);
         cbAdrenotoolsTurnip = findViewById(R.id.CBAdrenotoolsTurnip);
         cbSyncFrame = findViewById(R.id.CBSyncFrame);
         cbDisablePresentWait = findViewById(R.id.CBDisablePresentWait);
+        cbEnableBlit = findViewById(R.id.CBEnableBlit);
 
         HashMap<String, String> config = parseGraphicsDriverConfig(graphicsDriverConfig);
 
@@ -122,6 +139,8 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
         String syncFrame = config.get("syncFrame");
         String disablePresentWait = config.get("disablePresentWait");
         String presentMode = config.get("presentMode");
+        String blit = config.get("blit");
+        String resourceType = config.get("resourceType");
 
         // Update the selectedVersion whenever the user selects a different version
         sVersion.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -187,6 +206,18 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
             }
         });
 
+        sResourceType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                selectedResourceType = sResourceType.getSelectedItem().toString();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
+        });
+
         isAdrenotoolsTurnip = adrenotoolsTurnip;
         cbAdrenotoolsTurnip.setChecked(isAdrenotoolsTurnip.equals("1") ? true : false);
         cbAdrenotoolsTurnip.setOnCheckedChangeListener((buttonView, isChecked) ->  {
@@ -205,12 +236,18 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
             isDisablePresentWait = isChecked ? "1" : "0";
         });
 
+        enableBlit = blit;
+        cbEnableBlit.setChecked(enableBlit.equals("1") ? true : false);
+        cbEnableBlit.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            enableBlit = isChecked ? "1" : "0";
+        });
+
         // Ensure ContentsManager syncContents is called
         ContentsManager contentsManager = new ContentsManager(anchor.getContext());
         contentsManager.syncContents();
         
         // Populate the spinner with available versions from ContentsManager and pre-select the initial version
-        populateGraphicsDriverVersions(anchor.getContext(), contentsManager, vulkanVersion, initialVersion, blExtensions, maxDeviceMemory, presentMode, graphicsDriver);
+        populateGraphicsDriverVersions(anchor.getContext(), contentsManager, vulkanVersion, initialVersion, blExtensions, maxDeviceMemory, presentMode, resourceType, graphicsDriver);
 
         setOnConfirmCallback(() -> {
             blacklistedExtensions = mscAvailableExtensions.getUnSelectedItemsAsString();
@@ -222,7 +259,7 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
         });
     }
 
-    private void populateGraphicsDriverVersions(Context context, ContentsManager contentsManager, String vulkanVersion, @Nullable String initialVersion, @Nullable String blExtensions, String maxDeviceMemory, String presentMode, String graphicsDriver) {
+    private void populateGraphicsDriverVersions(Context context, ContentsManager contentsManager, String vulkanVersion, @Nullable String initialVersion, @Nullable String blExtensions, String maxDeviceMemory, String presentMode, String selectedResourceType, String graphicsDriver) {
         List<String> wrapperVersions = new ArrayList<>();
         String[] wrapperDefaultVersions = context.getResources().getStringArray(R.array.wrapper_graphics_driver_version_entries);
 
@@ -254,6 +291,7 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
         AppUtils.setSpinnerSelectionFromValue(sVulkanVersion, vulkanVersion);
         AppUtils.setSpinnerSelectionFromNumber(sMaxDeviceMemory, maxDeviceMemory);
         AppUtils.setSpinnerSelectionFromValue(sPresentMode, presentMode);
+        AppUtils.setSpinnerSelectionFromValue(sResourceType, selectedResourceType);
 
         // We can log the spinner values now
         Log.d(TAG, "Spinner selected position: " + sVersion.getSelectedItemPosition());

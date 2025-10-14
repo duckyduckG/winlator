@@ -70,6 +70,12 @@
         <item>immediate</item>
         <item>relaxed</item>
     </string-array>
+    <string-array name="resource_type_entries">
+        <item>auto</item>
+        <item>dmabuf</item>
+        <item>ahb</item>
+        <item>opaque</item>
+    </string-array>
     <string-array name="vulkan_version_entries">
         <item>1.1</item>
         <item>1.2</item>
