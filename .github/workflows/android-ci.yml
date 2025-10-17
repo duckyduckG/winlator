@@ -49,5 +49,5 @@ jobs:
       with:
         name: "winlator_bionic ${{ env.VERSION }}-(git-${{ env.SHORT_SHA }})"
         tag_name: ${{ env.SHORT_SHA }}
-        prerelease: true
+        prerelease: false
         files: ./app/build/outputs/apk/debug/app-debug.apk
