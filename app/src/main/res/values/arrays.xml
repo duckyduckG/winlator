@@ -290,20 +290,6 @@
         <item>reverse portrait</item>
         <item>reverse landscape</item>
     </string-array>
-    <string-array name="fexcore_preset_entries">
-        <item>Fastest</item>
-        <item>Fast</item>
-        <item>Slow</item>
-        <item>Slowest</item>
-    </string-array>
-    <string-array name="x87mode_preset_entries">
-        <item>Fast</item>
-        <item>Slow</item>
-    </string-array>
-    <string-array name="multiblock_values">
-        <item>Enabled</item>
-        <item>Disabled</item>
-    </string-array>
     <string-array name="emulator_entries">
         <item>FEXCore</item>
         <item>Box64</item>

@@ -37,6 +37,8 @@ import com.winlator.cmod.core.EnvVars;
 import com.winlator.cmod.core.StringUtils;
 import com.winlator.cmod.core.WineInfo;
 import com.winlator.cmod.fexcore.FEXCoreManager;
+import com.winlator.cmod.fexcore.FEXCorePreset;
+import com.winlator.cmod.fexcore.FEXCorePresetManager;
 import com.winlator.cmod.inputcontrols.ControlsProfile;
 import com.winlator.cmod.inputcontrols.InputControlsManager;
 import com.winlator.cmod.midi.MidiManager;
@@ -214,11 +216,10 @@ public class ShortcutSettingsDialog extends ContentDialog {
         Box64PresetManager.loadSpinner("box64", sBox64Preset, shortcut.getExtra("box64Preset", shortcut.container.getBox64Preset()));
 
         final Spinner sFEXCoreVersion = findViewById(R.id.SFEXCoreVersion);
-        final Spinner sFEXCoreTSOPreset = findViewById(R.id.SFEXCoreTSOPreset);
-        final Spinner sFEXCoreMultiBlock = findViewById(R.id.SFEXCoreMultiblock);
-        final Spinner sFEXCoreX87ReducedPrecision = findViewById(R.id.SFEXCoreX87ReducedPrecision);
-        
-        FEXCoreManager.loadFEXCoreSpinners(context, contentsManager, sFEXCoreTSOPreset, sFEXCoreMultiBlock, sFEXCoreX87ReducedPrecision, sFEXCoreVersion, shortcut.getExtra("fexConfig", shortcut.container.getFEXConfig()));
+        FEXCoreManager.loadFEXCoreVersion(context, contentsManager, sFEXCoreVersion, shortcut.getExtra("fexcoreVersion", shortcut.container.getFEXCoreVersion()));
+
+        final Spinner sFEXCorePreset = findViewById(R.id.SFEXCorePreset);
+        FEXCorePresetManager.loadSpinner(sFEXCorePreset, shortcut.getExtra("fexcorePreset", shortcut.container.getFEXCorePreset()));
 
         final Spinner sControlsProfile = findViewById(R.id.SControlsProfile);
         loadControlsProfileSpinner(sControlsProfile, shortcut.getExtra("controlsProfile", "0"));
@@ -372,8 +373,11 @@ public class ShortcutSettingsDialog extends ContentDialog {
                 String envVars = envVarsView.getEnvVars();
                 shortcut.putExtra("envVars", !envVars.isEmpty() ? envVars : null);
 
-                String fexConfig = FEXCoreManager.saveFEXCoreConfig(sFEXCoreTSOPreset, sFEXCoreMultiBlock, sFEXCoreX87ReducedPrecision, sFEXCoreVersion);
-                shortcut.putExtra("fexConfig", fexConfig);
+                String fexcoreVersion = sFEXCoreVersion.getSelectedItem().toString();
+                shortcut.putExtra("fexcoreVersion", fexcoreVersion);
+
+                String fexcorePreset = FEXCorePresetManager.getSpinnerSelectedId(sFEXCorePreset);
+                shortcut.putExtra("fexcorePreset", fexcorePreset);
 
                 String box64Preset = Box64PresetManager.getSpinnerSelectedId(sBox64Preset);
                 shortcut.putExtra("box64Preset", box64Preset);
@@ -480,9 +484,7 @@ public class ShortcutSettingsDialog extends ContentDialog {
         Spinner sMIDISoundFont = view.findViewById(R.id.SMIDISoundFont);
         Spinner sBox64Version = view.findViewById(R.id.SBox64Version);
         Spinner sFEXCoreVersion = view.findViewById(R.id.SFEXCoreVersion);
-        Spinner sFEXCoreTSOPreset = findViewById(R.id.SFEXCoreTSOPreset);
-        Spinner sFEXCoreMultiBlock = findViewById(R.id.SFEXCoreMultiblock);
-        Spinner sFEXCoreX87ReducedPrecision = findViewById(R.id.SFEXCoreX87ReducedPrecision);
+        Spinner sFEXCorePreset = view.findViewById(R.id.SFEXCorePreset);
         Spinner sStartupSelection = findViewById(R.id.SStartupSelection);
         
 
@@ -496,9 +498,7 @@ public class ShortcutSettingsDialog extends ContentDialog {
         sDInputType.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
         sMIDISoundFont.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
         sBox64Version.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
-        sFEXCoreTSOPreset.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
-        sFEXCoreMultiBlock.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
-        sFEXCoreX87ReducedPrecision.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
+        sFEXCorePreset.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
         sFEXCoreVersion.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
         sStartupSelection.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
 

@@ -51,6 +51,9 @@ import com.winlator.cmod.core.Callback;
 import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.PreloaderDialog;
 import com.winlator.cmod.core.TarCompressorUtils;
+import com.winlator.cmod.fexcore.FEXCoreEditPresetDialog;
+import com.winlator.cmod.fexcore.FEXCorePreset;
+import com.winlator.cmod.fexcore.FEXCorePresetManager;
 import com.winlator.cmod.inputcontrols.ControlElement;
 import com.winlator.cmod.inputcontrols.ExternalController;
 import com.winlator.cmod.inputcontrols.PreferenceKeys;
@@ -60,6 +63,7 @@ import com.winlator.cmod.xenvironment.ImageFsInstaller;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.w3c.dom.Text;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -94,7 +98,8 @@ public class SettingsFragment extends Fragment {
     private static final int REQUEST_CODE_WINLATOR_PATH = 1002;
     private static final int REQUEST_CODE_SHORTCUT_EXPORT_PATH = 1003;
     private static final int REQUEST_CODE_INSTALL_SOUNDFONT = 1001;
-    private static final int REQUEST_CODE_IMPORT_PRESET = 1004;
+    private static final int REQUEST_CODE_IMPORT_BOX64_PRESET = 1004;
+    private static final int REQUEST_CODE_IMPORT_FEXCORE_PRESET = 1005;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -193,6 +198,9 @@ public class SettingsFragment extends Fragment {
 
         final Spinner sBox64Preset = view.findViewById(R.id.SBox64Preset);
         loadBox64PresetSpinners(view, sBox64Preset);
+
+        final Spinner sFEXCorePreset = view.findViewById(R.id.SFEXCorePreset);
+        loadFEXCorePresetSpinners(view, sFEXCorePreset);
 
         final Spinner sMIDISoundFont = view.findViewById(R.id.SMIDISoundFont);
 
@@ -306,6 +314,7 @@ public class SettingsFragment extends Fragment {
             // Save Dark Mode setting
             editor.putBoolean("dark_mode", cbDarkMode.isChecked());
             editor.putString("box64_preset", Box64PresetManager.getSpinnerSelectedId(sBox64Preset));
+            editor.putString("fexcore_preset", FEXCorePresetManager.getSpinnerSelectedId(sFEXCorePreset));
             editor.putBoolean("use_dri3", cbUseDRI3.isChecked());
             editor.putBoolean("use_xr", cbUseXR.isChecked());
             editor.putFloat("cursor_speed", sbCursorSpeed.getProgress() / 100.0f);
@@ -362,11 +371,16 @@ public class SettingsFragment extends Fragment {
         Spinner sBox64Preset = view.findViewById(R.id.SBox64Preset);
         sBox64Preset.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
 
+        Spinner sFEXCorePreset = view.findViewById(R.id.SFEXCorePreset);
+        sFEXCorePreset.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
     }
 
     private void applyDynamicStylesRecursively(View view) {
         TextView box64Label = view.findViewById(R.id.TVBox64);
         applyFieldSetLabelStyle(box64Label, isDarkMode);
+
+        TextView fexcoreLabel = view.findViewById(R.id.TVFEXCore);
+        applyFieldSetLabelStyle(fexcoreLabel, isDarkMode);
 
         TextView soundLabel = view.findViewById(R.id.TVSound);
         applyFieldSetLabelStyle(soundLabel, isDarkMode);
@@ -508,7 +522,7 @@ public class SettingsFragment extends Fragment {
         };
 
         Callback<String> onImportPreset = (String prefix) -> {
-          openFile(REQUEST_CODE_IMPORT_PRESET);
+          openFile(REQUEST_CODE_IMPORT_BOX64_PRESET);
         };
 
         updateSpinner.call("box64");
@@ -519,6 +533,68 @@ public class SettingsFragment extends Fragment {
         view.findViewById(R.id.BTRemoveBox64Preset).setOnClickListener((v) -> onRemovePreset.call("box64"));
         view.findViewById(R.id.BTExportBox64Preset).setOnClickListener((v) -> onExportPreset.call("box64"));
         view.findViewById(R.id.BTImportBox64Preset).setOnClickListener((v) -> onImportPreset.call("box64"));
+    }
+
+    private void loadFEXCorePresetSpinners(View view, final Spinner sFEXCorePreset) {
+        final Context context = getContext();
+
+        Callback<String> updateSpinner = (String prefix) -> {
+            FEXCorePresetManager.loadSpinner(sFEXCorePreset, preferences.getString(prefix + "_preset", FEXCorePreset.COMPATIBILITY));
+        };
+
+        Callback<String> onAddPreset = (String prefix) -> {
+            FEXCoreEditPresetDialog dialog = new FEXCoreEditPresetDialog(context, null);
+            dialog.setOnConfirmCallback(() -> updateSpinner.call(prefix));
+            dialog.show();
+        };
+
+        Callback<String> onEditPreset = (prefix) -> {
+            FEXCoreEditPresetDialog dialog = new FEXCoreEditPresetDialog(context, FEXCorePresetManager.getSpinnerSelectedId(sFEXCorePreset));
+            dialog.setOnConfirmCallback(() -> updateSpinner.call(prefix));
+            dialog.show();
+        };
+
+        Callback<String> onDuplicatePreset = (String prefix) -> ContentDialog.confirm(context, R.string.do_you_want_to_duplicate_this_preset, () -> {
+            FEXCorePresetManager.duplicatePreset(context, FEXCorePresetManager.getSpinnerSelectedId(sFEXCorePreset));
+            updateSpinner.call(prefix);
+            sFEXCorePreset.setSelection(sFEXCorePreset.getCount()-1);
+        });
+
+        Callback<String> onRemovePreset = (prefix) -> {
+            final String presetId = FEXCorePresetManager.getSpinnerSelectedId(sFEXCorePreset);
+            if (!presetId.startsWith(FEXCorePreset.CUSTOM)) {
+                AppUtils.showToast(context, R.string.you_cannot_remove_this_preset);
+                return;
+            }
+            ContentDialog.confirm(context, R.string.do_you_want_to_remove_this_preset, () -> {
+                FEXCorePresetManager.removePreset(context, presetId);
+                updateSpinner.call(prefix);
+            });
+        };
+
+        Callback<String> onExportPreset = (String prefix) -> {
+            final String presetId = FEXCorePresetManager.getSpinnerSelectedId(sFEXCorePreset);
+            if (!presetId.startsWith(FEXCorePreset.CUSTOM)) {
+                AppUtils.showToast(context, "Cannot export this preset");
+                return;
+            }
+            getActivity().runOnUiThread(() ->  {
+                FEXCorePresetManager.exportPreset(context, presetId);
+            });
+        };
+
+        Callback<String> onImportPreset = (String prefix) -> {
+            openFile(REQUEST_CODE_IMPORT_FEXCORE_PRESET);
+        };
+
+        updateSpinner.call("fexcore");
+
+        view.findViewById(R.id.BTAddFEXCorePreset).setOnClickListener((v) -> onAddPreset.call("fexcore"));
+        view.findViewById(R.id.BTEditFEXCorePreset).setOnClickListener((v) -> onEditPreset.call("fexcore"));
+        view.findViewById(R.id.BTDuplicateFEXCorePreset).setOnClickListener((v) -> onDuplicatePreset.call("fexcore"));
+        view.findViewById(R.id.BTRemoveFEXCorePreset).setOnClickListener((v) -> onRemovePreset.call("fexcore"));
+        view.findViewById(R.id.BTExportFEXCorePreset).setOnClickListener((v) -> onExportPreset.call("fexcore"));
+        view.findViewById(R.id.BTImportFEXCorePreset).setOnClickListener((v) -> onImportPreset.call("fexcore"));
     }
 
 
@@ -663,7 +739,7 @@ public class SettingsFragment extends Fragment {
                         }
                         break;
 
-                    case REQUEST_CODE_IMPORT_PRESET:
+                    case REQUEST_CODE_IMPORT_BOX64_PRESET:
                         try {
                             Spinner sBox64Preset = getView().findViewById(R.id.SBox64Preset);
                             InputStream is = getActivity().getContentResolver().openInputStream(uri);
@@ -671,7 +747,14 @@ public class SettingsFragment extends Fragment {
                             Box64PresetManager.loadSpinner("box64", sBox64Preset, preferences.getString("box64_preset", Box64Preset.COMPATIBILITY));
                         } catch (FileNotFoundException e) {
                         }
-
+                    case REQUEST_CODE_IMPORT_FEXCORE_PRESET:
+                        try {
+                            Spinner sFEXCorePreset = getView().findViewById(R.id.SFEXCorePreset);
+                            InputStream is = getActivity().getContentResolver().openInputStream(uri);
+                            FEXCorePresetManager.importPreset( getContext(), is);
+                            FEXCorePresetManager.loadSpinner(sFEXCorePreset, preferences.getString("fexcore_preset", FEXCorePreset.COMPATIBILITY));
+                        } catch (FileNotFoundException e) {
+                        }
                         // Add future cases here for other request codes...
                     default:
                         break;

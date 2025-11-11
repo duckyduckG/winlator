@@ -58,6 +58,8 @@ import com.winlator.cmod.core.WineInfo;
 import com.winlator.cmod.core.WineRegistryEditor;
 import com.winlator.cmod.core.WineThemeManager;
 import com.winlator.cmod.fexcore.FEXCoreManager;
+import com.winlator.cmod.fexcore.FEXCorePreset;
+import com.winlator.cmod.fexcore.FEXCorePresetManager;
 import com.winlator.cmod.midi.MidiManager;
 import com.winlator.cmod.widget.CPUListView;
 import com.winlator.cmod.widget.ColorPickerView;
@@ -196,15 +198,8 @@ public class ContainerDetailFragment extends Fragment {
         Spinner sFEXCoreVersion = view.findViewById(R.id.SFEXCoreVersion);
         sFEXCoreVersion.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
 
-        Spinner sFEXCoreTSOPreset = view.findViewById(R.id.SFEXCoreTSOPreset);
-        sFEXCoreTSOPreset.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
-        
-        Spinner sFEXCoreMultiBlock = view.findViewById(R.id.SFEXCoreMultiblock);
-        sFEXCoreMultiBlock.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
-        
-        Spinner sFEXCoreX87ReducedPrecision = view.findViewById(R.id.SFEXCoreX87ReducedPrecision);
-        sFEXCoreX87ReducedPrecision.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
-        
+        Spinner sFEXCorePreset = view.findViewById(R.id.SFEXCorePreset);
+        sFEXCorePreset.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
 
         Spinner sStartupSelection = view.findViewById(R.id.SStartupSelection);
         sStartupSelection.setPopupBackgroundResource(isDarkMode ? R.drawable.content_dialog_background_dark : R.drawable.content_dialog_background);
@@ -421,11 +416,10 @@ public class ContainerDetailFragment extends Fragment {
         Box64PresetManager.loadSpinner("box64", sBox64Preset, isEditMode() ? container.getBox64Preset() : preferences.getString("box64_preset", Box64Preset.COMPATIBILITY));
 
         final Spinner sFEXCoreVersion = view.findViewById(R.id.SFEXCoreVersion);
-        final Spinner sFEXCoreTSOPreset = view.findViewById(R.id.SFEXCoreTSOPreset);
-        final Spinner sFEXCoreMultiBlock = view.findViewById(R.id.SFEXCoreMultiblock);
-        final Spinner sFEXCoreX87ReducedPrecision = view.findViewById(R.id.SFEXCoreX87ReducedPrecision);
-        
-        FEXCoreManager.loadFEXCoreSpinners(context, contentsManager, sFEXCoreTSOPreset, sFEXCoreMultiBlock, sFEXCoreX87ReducedPrecision, sFEXCoreVersion, isEditMode() ? container.getFEXConfig() : Container.DEFAULT_FEXCONFIG);
+        FEXCoreManager.loadFEXCoreVersion(context, contentsManager, sFEXCoreVersion, isEditMode() ? container.getFEXCoreVersion() : DefaultVersion.FEXCORE);
+
+        final Spinner sFEXCorePreset = view.findViewById(R.id.SFEXCorePreset);
+        FEXCorePresetManager.loadSpinner(sFEXCorePreset, isEditMode() ? container.getFEXCorePreset() : FEXCorePreset.INTERMEDIATE);
 
         String selectedDriver = sGraphicsDriver.getSelectedItem().toString();
         List<String> sGraphicsItemsList = new ArrayList<>(Arrays.asList(context.getResources().getStringArray(R.array.graphics_driver_entries)));
@@ -478,7 +472,7 @@ public class ContainerDetailFragment extends Fragment {
                 String graphicsDriverConfig = vGraphicsDriverConfig.getTag().toString();
                 HashMap<String, String> config = GraphicsDriverConfigDialog.parseGraphicsDriverConfig(graphicsDriverConfig);
                 if (config.get("version").isEmpty()) {
-                    config.put("version", GPUInformation.isDriverSupported(DefaultVersion.WRAPPER_ADRENO, context) ? DefaultVersion.WRAPPER_ADRENO : DefaultVersion.WRAPPER);
+                    config.put("version", GPUInformation.isTurnipSupported(DefaultVersion.WRAPPER_ADRENO, context) ? DefaultVersion.WRAPPER_ADRENO : DefaultVersion.WRAPPER);
                     graphicsDriverConfig = GraphicsDriverConfigDialog.toGraphicsDriverConfig(config);
                 }
                 String dxwrapper = StringUtils.parseIdentifier(sDXWrapper.getSelectedItem());
@@ -493,7 +487,8 @@ public class ContainerDetailFragment extends Fragment {
                 String cpuListWoW64 = cpuListViewWoW64.getCheckedCPUListAsString();
                 byte startupSelection = (byte) sStartupSelection.getSelectedItemPosition();
                 String box64Version = sBox64Version.getSelectedItem().toString();
-                String fexcoreConfig = FEXCoreManager.saveFEXCoreConfig(sFEXCoreTSOPreset, sFEXCoreMultiBlock, sFEXCoreX87ReducedPrecision, sFEXCoreVersion);
+                String fexcoreVersion = sFEXCoreVersion.getSelectedItem().toString();
+                String fexcorePreset = FEXCorePresetManager.getSpinnerSelectedId(sFEXCorePreset);
                 String box64Preset = Box64PresetManager.getSpinnerSelectedId(sBox64Preset);
                 String desktopTheme = getDesktopTheme(view);
                 // Capture missing properties
@@ -546,7 +541,8 @@ public class ContainerDetailFragment extends Fragment {
                     container.setStartupSelection(startupSelection);
                     container.setBox64Version(box64Version);
                     container.setBox64Preset(box64Preset);
-                    container.setFEXConfig(fexcoreConfig);
+                    container.setFEXCoreVersion(fexcoreVersion);
+                    container.setFEXCorePreset(fexcorePreset);
                     container.setDesktopTheme(desktopTheme);
                     container.setMidiSoundFont(midiSoundFont);
                     container.setLC_ALL(lc_all);
@@ -577,7 +573,8 @@ public class ContainerDetailFragment extends Fragment {
                     data.put("startupSelection", startupSelection);
                     data.put("box64Version", box64Version);
                     data.put("box64Preset", box64Preset);
-                    data.put("fexConfig", fexcoreConfig);
+                    data.put("fexcoreVersion", fexcoreVersion);
+                    data.put("fexcorePreset", fexcorePreset);
                     data.put("desktopTheme", desktopTheme);
                     data.put("wineVersion", sWineVersion.getSelectedItem().toString());
                     data.put("midiSoundFont", midiSoundFont);

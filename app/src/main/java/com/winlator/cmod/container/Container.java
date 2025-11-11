@@ -11,6 +11,7 @@ import com.winlator.cmod.core.FileUtils;
 import com.winlator.cmod.core.KeyValueSet;
 import com.winlator.cmod.core.WineInfo;
 import com.winlator.cmod.core.WineThemeManager;
+import com.winlator.cmod.fexcore.FEXCorePreset;
 import com.winlator.cmod.winhandler.WinHandler;
 import com.winlator.cmod.xenvironment.ImageFs;
 
@@ -31,7 +32,6 @@ public class Container {
     public static final String DEFAULT_AUDIO_DRIVER = "alsa";
     public static final String DEFAULT_EMULATOR = "FEXCore";
     public static final String DEFAULT_DXWRAPPER = "dxvk+vkd3d";
-    public static final String DEFAULT_FEXCONFIG = "version=" + DefaultVersion.FEXCORE + ",tsoMode=Fast" + ",x87Mode=1" + ",multiblock=1";
     public static final String DEFAULT_DXWRAPPERCONFIG = "version=" + DefaultVersion.DXVK + ",framerate=0,async=0,asyncCache=0" + ",vkd3dVersion=" + DefaultVersion.VKD3D + ",vkd3dLevel=12_1" + ",ddrawrapper=" + Container.DEFAULT_DDRAWRAPPER + ",csmt=3" + ",gpuName=NVIDIA GeForce GTX 480" + ",videoMemorySize=2048" + ",strict_shader_math=1" + ",OffscreenRenderingMode=fbo" + ",renderer=gl";
     public static final String DEFAULT_GRAPHICSDRIVERCONFIG =
             "vulkanVersion=1.3" + ";version=" + ";blacklistedExtensions=" + ";maxDeviceMemory=0" + ";adrenotoolsTurnip=1" + ";presentMode=mailbox" + ";syncFrame=0" + ";disablePresentWait=0" + ";resourceType=auto" + ";blit=0";
@@ -61,7 +61,8 @@ public class Container {
     private String cpuList;
     private String cpuListWoW64;
     private String desktopTheme = WineThemeManager.DEFAULT_DESKTOP_THEME;
-    private String fexConfig = DEFAULT_FEXCONFIG;
+    private String fexcoreVersion;
+    private String fexcorePreset = FEXCorePreset.INTERMEDIATE;
     private String box64Preset = Box64Preset.COMPATIBILITY;
     private File rootDir;
     private JSONObject extraData;
@@ -236,12 +237,20 @@ public class Container {
         this.cpuListWoW64 = cpuListWoW64 != null && !cpuListWoW64.isEmpty() ? cpuListWoW64 : null;
     }
 
-    public String getFEXConfig() {
-        return fexConfig;
+    public void setFEXCoreVersion(String version) {
+        this.fexcoreVersion = version;
     }
 
-    public void setFEXConfig(String fexConfig) {
-        this.fexConfig = fexConfig;
+    public String getFEXCoreVersion() {
+        return this.fexcoreVersion;
+    }
+
+    public void setFEXCorePreset(String preset) {
+        this.fexcorePreset = preset;
+    }
+
+    public String getFEXCorePreset() {
+        return fexcorePreset;
     }
 
     public String getBox64Preset() {
@@ -394,7 +403,8 @@ public class Container {
             data.put("inputType", inputType);
             data.put("startupSelection", startupSelection);
             data.put("box64Version", box64Version);
-            data.put("fexConfig", fexConfig);
+            data.put("fexcorePreset", fexcorePreset);
+            data.put("fexcoreVersion", fexcoreVersion);
             data.put("box64Preset", box64Preset);
             data.put("desktopTheme", desktopTheme);
             data.put("extraData", extraData);
@@ -477,8 +487,11 @@ public class Container {
                 case "box64Version":
                     setBox64Version(data.getString(key));
                     break;
-                case "fexConfig":
-                    setFEXConfig(data.getString(key));
+                case "fexcoreVersion":
+                    setFEXCoreVersion(data.getString(key));
+                    break;
+                case "fexcorePreset":
+                    setFEXCorePreset(data.getString(key));
                     break;
                 case "box64Preset" :
                     setBox64Preset(data.getString(key));

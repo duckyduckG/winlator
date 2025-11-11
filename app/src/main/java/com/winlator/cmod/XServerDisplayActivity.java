@@ -2,8 +2,12 @@ package com.winlator.cmod;
 
 import static com.winlator.cmod.core.AppUtils.showToast;
 
+import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
@@ -13,6 +17,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -35,6 +40,9 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -124,6 +132,8 @@ import java.util.concurrent.Executors;
 import cn.sherlock.com.sun.media.sound.SF2Soundbank;
 
 public class XServerDisplayActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
+    public static String NOTIFICATION_CHANNEL_ID = "Winlator";
+    public static int NOTIFICATION_ID = -1;
     private XServerView xServerView;
     private InputControlsView inputControlsView;
     private TouchpadView touchpadView;
@@ -143,7 +153,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     private String emulator = Container.DEFAULT_EMULATOR;
     private String dxwrapper = Container.DEFAULT_DXWRAPPER;
     private KeyValueSet dxwrapperConfig;
-    private KeyValueSet fexConfig;
     private String startupSelection;
     private WineInfo wineInfo;
     private final EnvVars envVars = new EnvVars();
@@ -194,6 +203,15 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     private GuestProgramLauncherComponent guestProgramLauncherComponent;
     private EnvVars overrideEnvVars;
 
+    private void createNotifcationChannel() {
+        String name = "Winlator";
+        String description = "Winlator XServer Messages";
+        int importance = NotificationManager.IMPORTANCE_HIGH;
+        NotificationChannel channel = new NotificationChannel(NOTIFICATION_CHANNEL_ID, name, importance);
+        channel.setDescription(description);
+        NotificationManager notificationManager = getSystemService(NotificationManager.class);
+        notificationManager.createNotificationChannel(channel);
+    }
 
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
@@ -428,7 +446,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         screenSize = container.getScreenSize();
         winHandler.setInputType((byte) container.getInputType());
         lc_all = container.getLC_ALL();
-        String fexConfig = container.getFEXConfig();
 
         // Log the entire intent to verify the extras
         Intent intent = getIntent();
@@ -441,7 +458,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             emulator = shortcut.getExtra("emulator", container.getEmulator());
             dxwrapper = shortcut.getExtra("dxwrapper", container.getDXWrapper());
             dxwrapperConfig = shortcut.getExtra("dxwrapperConfig", container.getDXWrapperConfig());
-            fexConfig = shortcut.getExtra("fexConfig", container.getFEXConfig());
             screenSize = shortcut.getExtra("screenSize", container.getScreenSize());
             lc_all = shortcut.getExtra("lc_all", container.getLC_ALL());
             String inputType = shortcut.getExtra("inputType");
@@ -461,7 +477,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         this.graphicsDriverConfig = GraphicsDriverConfigDialog.parseGraphicsDriverConfig(graphicsDriverConfig);
         this.dxwrapperConfig = DXVKConfigDialog.parseConfig(dxwrapperConfig);
-        this.fexConfig = new KeyValueSet(fexConfig);
 
         if (!wineInfo.isWin64()) {
             onExtractFileListener = (file, size) -> {
@@ -539,6 +554,26 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
         // Check if a profile is defined by the shortcut
         String controlsProfile = shortcut != null ? shortcut.getExtra("controlsProfile", "") : "";
+
+        createNotifcationChannel();
+
+        Intent notificationIntent = new Intent(this, XServerDisplayActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_ab_gear_0011)
+                .setContentTitle("Winlator")
+                .setContentText("Winlator is running, do not kill or swipe this notification")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(false);
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 0);
+            }
+        }
+
+        NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, builder.build());
 
         Runnable runnable = () -> {
             setupUI();
@@ -755,6 +790,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
     }
 
     private void exit() {
+        NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID);
         preloaderDialog.showOnUiThread(R.string.shutdown);
         handler.postDelayed(new Runnable() {
             @Override
@@ -1024,7 +1060,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             }
             guestProgramLauncherComponent.setContainer(this.container);
             guestProgramLauncherComponent.setWineInfo(this.wineInfo);
-            guestProgramLauncherComponent.setFEXConfig(fexConfig);
 
             String guestExecutable = "wine explorer /desktop=shell," + xServer.screenInfo + " " + getWineStartCommand();
 
@@ -1049,6 +1084,12 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                     shortcut != null
                             ? shortcut.getExtra("box64Preset", container.getBox64Preset())
                             : container.getBox64Preset()
+            );
+
+            guestProgramLauncherComponent.setFEXCorePreset(
+                    shortcut != null
+                            ? shortcut.getExtra("fexcorePreset", container.getFEXCorePreset())
+                            : container.getFEXCorePreset()
             );
         }
 
@@ -1455,6 +1496,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         if (firstTimeBoot) {
             Log.d("XServerDisplayActivity", "First time container boot, re-extracting libs");
             TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "graphics_driver/wrapper" + ".tzst", rootDir);
+            TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "layers" + ".tzst", rootDir);
             TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "graphics_driver/extra_libs" + ".tzst", rootDir);
             if (wineInfo.isArm64EC())
                 TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, this, "graphics_driver/zink_dlls" + ".tzst", new File(rootDir, imageFs.WINEPREFIX + "/drive_c/windows"));
@@ -1466,7 +1508,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         }
 
         String vulkanVersion = graphicsDriverConfig.get("vulkanVersion");
-        String vulkanVersionPatch = GPUInformation.getVulkanVersion(adrenoToolsDriverId, this).split("\\.")[2];
+        String vulkanVersionPatch = GPUInformation.getVersion(adrenoToolsDriverId, this).split("\\.")[2];
         vulkanVersion = vulkanVersion + "." + vulkanVersionPatch;
         envVars.put("WRAPPER_VK_VERSION", vulkanVersion);
 

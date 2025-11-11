@@ -24,6 +24,8 @@ import com.winlator.cmod.core.ProcessHelper;
 import com.winlator.cmod.core.TarCompressorUtils;
 import com.winlator.cmod.core.WineInfo;
 import com.winlator.cmod.fexcore.FEXCoreManager;
+import com.winlator.cmod.fexcore.FEXCorePreset;
+import com.winlator.cmod.fexcore.FEXCorePresetManager;
 import com.winlator.cmod.xconnector.UnixSocketConfig;
 import com.winlator.cmod.xenvironment.EnvironmentComponent;
 import com.winlator.cmod.xenvironment.ImageFs;
@@ -48,7 +50,7 @@ public class GuestProgramLauncherComponent extends EnvironmentComponent {
     private EnvVars envVars;
     private WineInfo wineInfo;
     private String box64Preset = Box64Preset.COMPATIBILITY;
-    private KeyValueSet fexConfig;
+    private String fexcorePreset = FEXCorePreset.INTERMEDIATE;
     private Callback<Integer> terminationCallback;
     private static final Object lock = new Object();
     private final ContentsManager contentsManager;
@@ -65,10 +67,6 @@ public class GuestProgramLauncherComponent extends EnvironmentComponent {
 
     public Container getContainer() { return this.container; }
     public void setContainer(Container container) { this.container = container; }
-
-    public void setFEXConfig(KeyValueSet fexConfig) {
-        this.fexConfig = fexConfig;
-    }
 
     private void extractBox64Files() {
         ImageFs imageFs = environment.getImageFs();
@@ -108,7 +106,7 @@ public class GuestProgramLauncherComponent extends EnvironmentComponent {
         boolean containerDataChanged = false;
 
         String wowbox64Version = container.getBox64Version();
-        String fexcoreVersion = fexConfig.get("version");
+        String fexcoreVersion = container.getFEXCoreVersion();
 
         if (shortcut != null) {
             wowbox64Version = shortcut.getExtra("box64Version", shortcut.container.getBox64Version());
@@ -137,28 +135,6 @@ public class GuestProgramLauncherComponent extends EnvironmentComponent {
             containerDataChanged = true;
         }
         if (containerDataChanged) container.saveData();
-    }
-
-    private void extractLayers(File libDir) {
-        String[] libs = new String[] { "libVkLayer_khronos_validation.so" };
-        for (int i = 0; i < libs.length; i++) {
-            String path = "lib/" + "arm64-v8a" + "/" + libs[i];
-            ClassLoader loader = PulseAudioComponent.class.getClassLoader();
-            URL res = loader != null ? loader.getResource(path) : null;
-            Path dstFile = Paths.get(libDir.getAbsolutePath() + "/" + libs[i]);
-            if (dstFile.toFile().exists())
-                continue;
-            try {
-                InputStream is = res != null ? res.openStream() : null;
-                if (is != null) {
-                    Files.copy(is, dstFile, StandardCopyOption.REPLACE_EXISTING);
-                    FileUtils.chmod(dstFile.toFile(), 0771);
-                }
-            }
-            catch (IOException e) {
-                Log.e("GuestProgramLauncherComponent", "Failed to extract layer " + libs[i]);
-            }
-        }
     }
 
     public GuestProgramLauncherComponent(ContentsManager contentsManager, ContentProfile wineProfile, Shortcut shortcut) {
@@ -259,6 +235,8 @@ public class GuestProgramLauncherComponent extends EnvironmentComponent {
         this.box64Preset = box64Preset;
     }
 
+    public void setFEXCorePreset (String fexcorePreset) { this.fexcorePreset = fexcorePreset; }
+
     private int execGuestProgram() {
         Context context = environment.getContext();
         ImageFs imageFs = environment.getImageFs();
@@ -279,6 +257,7 @@ public class GuestProgramLauncherComponent extends EnvironmentComponent {
         EnvVars envVars = new EnvVars();
 
         addBox64EnvVars(envVars, enableBox64Logs);
+        envVars.putAll(FEXCorePresetManager.getEnvVars(context, fexcorePreset));
 
         String renderer = GPUInformation.getRenderer(null, null);
 
@@ -289,8 +268,6 @@ public class GuestProgramLauncherComponent extends EnvironmentComponent {
             Log.d("GuestProgramLauncherComponent", "Disabling map memory placed");
             envVars.put("WRAPPER_DISABLE_PLACED", "1");
         }
-
-        FEXCoreManager.loadFEXCoreEnvVars(fexConfig, envVars);
 
         // Setting up essential environment variables for Wine
         envVars.put("HOME", imageFs.home_path);
@@ -319,8 +296,6 @@ public class GuestProgramLauncherComponent extends EnvironmentComponent {
         envVars.put("PROTON_AUDIO_CONVERT", "0");
         envVars.put("PROTON_VIDEO_CONVERT", "0");
         envVars.put("PROTON_DEMUX", "0");
-
-        extractLayers(new File(rootDir.getPath(), "usr/lib"));
 
         String winePath = imageFs.getWinePath() + "/bin";
 

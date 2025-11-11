@@ -102,6 +102,90 @@
                 android:layout_height="wrap_content">
 
                 <LinearLayout style="@style/FieldSet">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/fexcore_preset" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <Spinner
+                            style="@style/ComboBox"
+                            android:id="@+id/SFEXCorePreset"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:spinnerMode="dialog" />
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="start"
+                        android:paddingTop="4dp">
+
+                        <ImageButton
+                            style="@style/ListMenuButton"
+                            android:id="@+id/BTAddFEXCorePreset"
+                            android:tooltipText="Add"
+                            android:src="@drawable/icon_add" />
+
+                        <ImageButton
+                            style="@style/ListMenuButton"
+                            android:id="@+id/BTEditFEXCorePreset"
+                            android:tooltipText="Edit"
+                            android:src="@drawable/icon_edit" />
+
+                        <ImageButton
+                            style="@style/ListMenuButton"
+                            android:tooltipText="Duplicate"
+                            android:id="@+id/BTDuplicateFEXCorePreset"
+                            android:src="@drawable/icon_duplicate" />
+
+                        <ImageButton
+                            style="@style/ListMenuButton"
+                            android:tooltipText="Remove"
+                            android:id="@+id/BTRemoveFEXCorePreset"
+                            android:layout_marginRight="0dp"
+                            android:src="@drawable/icon_remove" />
+
+                        <ImageButton
+                            style="@style/ListMenuButton"
+                            android:id="@+id/BTExportFEXCorePreset"
+                            android:tooltipText="Export"
+                            android:layout_marginRight="0dp"
+                            android:src="@drawable/icon_export" />
+
+                        <ImageButton
+                            style="@style/ListMenuButton"
+                            android:tooltipText="Import"
+                            android:id="@+id/BTImportFEXCorePreset"
+                            android:layout_marginRight="0dp"
+                            android:src="@drawable/icon_popup_menu_download" />
+
+                        <Space
+                            android:layout_width="75dp"
+                            android:layout_height="0dp" />
+                    </LinearLayout>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/TVFEXCore"
+                    style="@style/FieldSetLabel"
+                    android:text="@string/fexcore_config" />
+            </FrameLayout>
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <LinearLayout style="@style/FieldSet">
 
                     <TextView
                         android:layout_width="wrap_content"
