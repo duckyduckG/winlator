@@ -747,14 +747,16 @@ public class SettingsFragment extends Fragment {
                             Box64PresetManager.loadSpinner("box64", sBox64Preset, preferences.getString("box64_preset", Box64Preset.COMPATIBILITY));
                         } catch (FileNotFoundException e) {
                         }
+                        break;
                     case REQUEST_CODE_IMPORT_FEXCORE_PRESET:
                         try {
                             Spinner sFEXCorePreset = getView().findViewById(R.id.SFEXCorePreset);
                             InputStream is = getActivity().getContentResolver().openInputStream(uri);
                             FEXCorePresetManager.importPreset( getContext(), is);
-                            FEXCorePresetManager.loadSpinner(sFEXCorePreset, preferences.getString("fexcore_preset", FEXCorePreset.COMPATIBILITY));
+                            FEXCorePresetManager.loadSpinner(sFEXCorePreset, preferences.getString("fexcore_preset", FEXCorePreset.INTERMEDIATE));
                         } catch (FileNotFoundException e) {
                         }
+                        break;
                         // Add future cases here for other request codes...
                     default:
                         break;

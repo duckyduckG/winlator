@@ -34,9 +34,10 @@ public class EnvVarsView extends FrameLayout {
         {"mesa_glthread", "CHECKBOX", "false", "true"},
         {"WINEESYNC", "CHECKBOX", "0", "1"},
         {"TU_DEBUG", "SELECT_MULTIPLE", "startup", "nir", "nobin", "sysmem", "gmem", "forcebin", "layout", "noubwc", "nomultipos", "nolrz", "nolrzfc", "perf", "perfc", "flushall", "syncdraw", "push_consts_per_stage", "rast_order", "unaligned_store", "log_skip_gmem_ops", "dynamic", "bos", "3d_load", "fdm", "noconform", "rd"},
-        {"DXVK_HUD", "SELECT_MULTIPLE", "devinfo", "fps", "frametimes", "submissions", "drawcalls", "pipelines", "descriptors", "memory", "gpuload", "version", "api", "cs", "compiler", "samplers"},
-        {"MESA_EXTENSION_MAX_YEAR", "NUMBER"},
-        {"MESA_GL_VERSION_OVERRIDE", "NUMBER"},
+        {"DXVK_HUD", "SELECT_MULTIPLE", "scale=0.5", "scale=0.7", "opacity=0.5", "opacity=0.7", "devinfo", "fps", "frametimes", "submissions", "drawcalls", "pipelines", "descriptors", "memory", "gpuload", "version", "api", "cs", "compiler", "samplers"},
+        {"MESA_EXTENSION_MAX_YEAR", "TEXT"},
+        {"WRAPPER_MAX_IMAGE_COUNT", "TEXT"},
+        {"MESA_GL_VERSION_OVERRIDE", "TEXT"},
         {"PULSE_LATENCY_MSEC", "NUMBER"},
         {"WINE_DO_NOT_CREATE_DXGI_DEVICE_MANAGER", "CHECKBOX", "0", "1"},
         {"WINE_NEW_MEDIASOURCE", "CHECKBOX", "0", "1"}

@@ -116,11 +116,20 @@ static VkResult create_instance(jstring driverName, JNIEnv *env, jobject context
 
     PFN_vkGetInstanceProcAddr gip = (PFN_vkGetInstanceProcAddr)dlsym(vulkan_handle, "vkGetInstanceProcAddr");
     PFN_vkCreateInstance createInstance = (PFN_vkCreateInstance)dlsym(vulkan_handle, "vkCreateInstance");
+    PFN_vkEnumerateInstanceVersion enumerateInstanceVersion = (PFN_vkEnumerateInstanceVersion)dlsym(vulkan_handle, "vkEnumerateInstanceVersion");
+
+    VkApplicationInfo app_info = {};
+    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    app_info.pApplicationName = "Winlator";
+    app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+    app_info.pEngineName = "Winlator";
+    app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+    enumerateInstanceVersion(&app_info.apiVersion);
 
     create_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     create_info.pNext = NULL;
     create_info.flags = 0;
-    create_info.pApplicationInfo = NULL;
+    create_info.pApplicationInfo = &app_info;
     create_info.enabledLayerCount = 0;
     create_info.enabledExtensionCount = 0;
 
@@ -170,7 +179,7 @@ static VkResult enumerate_physical_devices() {
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_winlator_cmod_core_GPUInformation_getVersion(JNIEnv *env, jclass obj, jstring driverName, jobject context) {
+Java_com_winlator_cmod_core_GPUInformation_getVulkanVersion(JNIEnv *env, jclass obj, jstring driverName, jobject context) {
     VkPhysicalDeviceProperties props = {};
     char *driverVersion;
 
@@ -185,10 +194,10 @@ Java_com_winlator_cmod_core_GPUInformation_getVersion(JNIEnv *env, jclass obj, j
     }
 
     getPhysicalDeviceProperties(physicalDevice, &props);
-    uint32_t vk_driver_major = VK_VERSION_MAJOR(props.driverVersion);
-    uint32_t vk_driver_minor = VK_VERSION_MINOR(props.driverVersion);
-    uint32_t vk_driver_patch = VK_VERSION_PATCH(props.driverVersion);
-    asprintf(&driverVersion, "%d.%d.%d", vk_driver_major, vk_driver_minor, vk_driver_patch);
+    uint32_t api_version_major = VK_VERSION_MAJOR(props.apiVersion);
+    uint32_t api_version_minor = VK_VERSION_MINOR(props.apiVersion);
+    uint32_t api_version_patch = VK_VERSION_PATCH(props.apiVersion);
+    asprintf(&driverVersion, "%d.%d.%d", api_version_major, api_version_minor, api_version_patch);
 
     destroyInstance(instance, NULL);
 

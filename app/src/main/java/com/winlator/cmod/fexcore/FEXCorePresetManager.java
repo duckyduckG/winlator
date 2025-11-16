@@ -193,10 +193,10 @@ public class FEXCorePresetManager {
                 if (uriPath != null) {
                     Uri uri = Uri.parse(uriPath);
                     String path = FileUtils.getFilePathFromUri(context, uri);
-                    presetFile = new File(path, "Presets/" + preset[1] + ".wbp");
+                    presetFile = new File(path, "Presets/fexcore_" + preset[1] + ".wbp");
                 }
                 else {
-                    presetFile = new File(SettingsFragment.DEFAULT_WINLATOR_PATH, "Presets/" + preset[1] + ".wbp");
+                    presetFile = new File(SettingsFragment.DEFAULT_WINLATOR_PATH, "Presets/fexcore_" + preset[1] + ".wbp");
                 }
                 if (!presetFile.getParentFile().exists())
                     presetFile.getParentFile().mkdirs();

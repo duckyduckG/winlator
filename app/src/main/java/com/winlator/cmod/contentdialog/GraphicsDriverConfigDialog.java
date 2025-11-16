@@ -36,21 +36,24 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
     private Spinner sMaxDeviceMemory;
     private Spinner sPresentMode;
     private Spinner sResourceType;
-    private CheckBox cbAdrenotoolsTurnip;
+    private Spinner sBCnEmulation;
+    private Spinner sBCnEmulationType;
+    private Spinner sBCnEmulationCache;
     private CheckBox cbSyncFrame;
     private CheckBox cbDisablePresentWait;
-    private CheckBox cbEnableBlit;
+
     private static String selectedVulkanVersion;
     private static String selectedVersion;
     private static String blacklistedExtensions = "";
     private static String selectedDeviceMemory;
-    private static String isAdrenotoolsTurnip;
+
     private static String isSyncFrame;
     private static String isDisablePresentWait;
     private static String selectedPresentMode;
     private static String selectedResourceType;
-
-    private static String enableBlit;
+    private static String selectedBCnEmulation;
+    private static String selectedBCnEmulationType;
+    private static String isBCnCacheEnabled;
 
 
     public static HashMap<String, String> parseGraphicsDriverConfig(String graphicsDriverConfig) {
@@ -93,24 +96,19 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
                 "version=" + selectedVersion + ";" +
                 "blacklistedExtensions=" + blacklistedExtensions + ";" +
                 "maxDeviceMemory=" + StringUtils.parseNumber(selectedDeviceMemory) + ";" +
-                "adrenotoolsTurnip=" + isAdrenotoolsTurnip + ";" +
                 "presentMode=" + selectedPresentMode + ";" +
                 "syncFrame=" + isSyncFrame + ";" +
                 "disablePresentWait=" + isDisablePresentWait + ";" +
                 "resourceType=" + selectedResourceType + ";" +
-                "blit=" + enableBlit;
+                "bcnEmulation=" + selectedBCnEmulation + ";" +
+                "bcnEmulationType=" + selectedBCnEmulationType + ";" +
+                "bcnEmulationCache=" + isBCnCacheEnabled;
         Log.i(TAG, "Written config " + graphicsDriverConfig);
         return graphicsDriverConfig;
     }
 
     private String[] queryAvailableExtensions(String driver, Context context) {
-        ArrayList<String> availableExtensions;
-        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
-            availableExtensions = new ArrayList<>(Arrays.asList(GPUInformation.enumerateExtensions(driver, context)));
-        else
-            availableExtensions = new ArrayList<>(Arrays.asList(GPUInformation.enumerateExtensions(null, context)));
-
-        return availableExtensions.toArray(new String[0]);
+        return GPUInformation.enumerateExtensions(driver, context);
     }
   
     public GraphicsDriverConfigDialog(View anchor, String graphicsDriver, TextView graphicsDriverVersionView) {
@@ -130,10 +128,11 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
         sPresentMode = findViewById(R.id.SGraphicsDriverPresentMode);
         sMaxDeviceMemory = findViewById(R.id.SGraphicsDriverMaxDeviceMemory);
         sResourceType = findViewById(R.id.SGraphicsDriverResourceType);
-        cbAdrenotoolsTurnip = findViewById(R.id.CBAdrenotoolsTurnip);
+        sBCnEmulation = findViewById(R.id.SGraphicsDriverBCnEmulation);
+        sBCnEmulationType = findViewById(R.id.SGraphicsDriverBCnEmulationType);
+        sBCnEmulationCache = findViewById(R.id.SGraphicsDriverBCnEmulationCache);
         cbSyncFrame = findViewById(R.id.CBSyncFrame);
         cbDisablePresentWait = findViewById(R.id.CBDisablePresentWait);
-        cbEnableBlit = findViewById(R.id.CBEnableBlit);
 
         HashMap<String, String> config = parseGraphicsDriverConfig(graphicsDriverConfig);
 
@@ -141,12 +140,13 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
         String initialVersion = config.get("version");
         String blExtensions = config.get("blacklistedExtensions");
         String maxDeviceMemory = config.get("maxDeviceMemory");
-        String adrenotoolsTurnip = config.get("adrenotoolsTurnip");
         String syncFrame = config.get("syncFrame");
         String disablePresentWait = config.get("disablePresentWait");
         String presentMode = config.get("presentMode");
-        String blit = config.get("blit");
         String resourceType = config.get("resourceType");
+        String bcnEmulation = config.get("bcnEmulation");
+        String bcnEmulationType = config.get("bcnEmulationType");
+        String bcnEmulationCache = config.get("bcnEmulationCache");
 
         // Update the selectedVersion whenever the user selects a different version
         sVersion.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -224,10 +224,40 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
             }
         });
 
-        isAdrenotoolsTurnip = adrenotoolsTurnip;
-        cbAdrenotoolsTurnip.setChecked(isAdrenotoolsTurnip.equals("1") ? true : false);
-        cbAdrenotoolsTurnip.setOnCheckedChangeListener((buttonView, isChecked) ->  {
-            isAdrenotoolsTurnip = isChecked ? "1" : "0";
+        sBCnEmulation.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                selectedBCnEmulation = sBCnEmulation.getSelectedItem().toString();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
+        });
+
+        sBCnEmulationType.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                selectedBCnEmulationType = sBCnEmulationType.getSelectedItem().toString();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
+        });
+
+        sBCnEmulationCache.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+                isBCnCacheEnabled = sBCnEmulationCache.getSelectedItem().toString();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> adapterView) {
+
+            }
         });
 
         isSyncFrame = syncFrame;
@@ -242,18 +272,12 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
             isDisablePresentWait = isChecked ? "1" : "0";
         });
 
-        enableBlit = blit;
-        cbEnableBlit.setChecked(enableBlit.equals("1") ? true : false);
-        cbEnableBlit.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            enableBlit = isChecked ? "1" : "0";
-        });
-
         // Ensure ContentsManager syncContents is called
         ContentsManager contentsManager = new ContentsManager(anchor.getContext());
         contentsManager.syncContents();
         
         // Populate the spinner with available versions from ContentsManager and pre-select the initial version
-        populateGraphicsDriverVersions(anchor.getContext(), contentsManager, vulkanVersion, initialVersion, blExtensions, maxDeviceMemory, presentMode, resourceType, graphicsDriver);
+        populateGraphicsDriverVersions(anchor.getContext(), contentsManager, vulkanVersion, initialVersion, blExtensions, maxDeviceMemory, presentMode, resourceType, bcnEmulation, bcnEmulationType, bcnEmulationCache, graphicsDriver);
 
         setOnConfirmCallback(() -> {
             blacklistedExtensions = mscAvailableExtensions.getUnSelectedItemsAsString();
@@ -265,14 +289,14 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
         });
     }
 
-    private void populateGraphicsDriverVersions(Context context, ContentsManager contentsManager, String vulkanVersion, @Nullable String initialVersion, @Nullable String blExtensions, String maxDeviceMemory, String presentMode, String selectedResourceType, String graphicsDriver) {
+    private void populateGraphicsDriverVersions(Context context, ContentsManager contentsManager, String vulkanVersion, @Nullable String initialVersion, @Nullable String blExtensions, String maxDeviceMemory, String presentMode, String selectedResourceType, String bcnEmulation, String bcnEmulationType, String bcnEmulationCache, String graphicsDriver) {
         List<String> wrapperVersions = new ArrayList<>();
         String[] wrapperDefaultVersions = context.getResources().getStringArray(R.array.wrapper_graphics_driver_version_entries);
 
-        if (GPUInformation.isAdrenoGPU(context))
-            wrapperVersions.addAll(Arrays.asList(wrapperDefaultVersions));
-        else
-            wrapperVersions.add(wrapperDefaultVersions[0]);
+        for (String version : wrapperDefaultVersions) {
+            if (GPUInformation.isDriverSupported(version, context))
+                wrapperVersions.add(version);
+        }
         
         // Add installed versions from AdrenotoolsManager
         AdrenotoolsManager adrenotoolsManager = new AdrenotoolsManager(context);
@@ -293,6 +317,9 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
         AppUtils.setSpinnerSelectionFromNumber(sMaxDeviceMemory, maxDeviceMemory);
         AppUtils.setSpinnerSelectionFromValue(sPresentMode, presentMode);
         AppUtils.setSpinnerSelectionFromValue(sResourceType, selectedResourceType);
+        AppUtils.setSpinnerSelectionFromValue(sBCnEmulation, bcnEmulation);
+        AppUtils.setSpinnerSelectionFromValue(sBCnEmulationType, bcnEmulationType);
+        AppUtils.setSpinnerSelectionFromValue(sBCnEmulationCache, bcnEmulationCache);
 
         // We can log the spinner values now
         Log.d(TAG, "Spinner selected position: " + sVersion.getSelectedItemPosition());
@@ -309,7 +336,7 @@ public class GraphicsDriverConfigDialog extends ContentDialog {
             }
         }
 
-        AppUtils.setSpinnerSelectionFromValue(spinner, GPUInformation.isTurnipSupported(DefaultVersion.WRAPPER_ADRENO, getContext()) ? DefaultVersion.WRAPPER_ADRENO : DefaultVersion.WRAPPER);
+        AppUtils.setSpinnerSelectionFromValue(spinner, GPUInformation.isDriverSupported(DefaultVersion.WRAPPER_ADRENO, getContext()) ? DefaultVersion.WRAPPER_ADRENO : DefaultVersion.WRAPPER);
     }
 
 }
