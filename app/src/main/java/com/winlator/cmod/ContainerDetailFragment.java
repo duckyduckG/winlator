@@ -419,7 +419,7 @@ public class ContainerDetailFragment extends Fragment {
         FEXCoreManager.loadFEXCoreVersion(context, contentsManager, sFEXCoreVersion, isEditMode() ? container.getFEXCoreVersion() : DefaultVersion.FEXCORE);
 
         final Spinner sFEXCorePreset = view.findViewById(R.id.SFEXCorePreset);
-        FEXCorePresetManager.loadSpinner(sFEXCorePreset, isEditMode() ? container.getFEXCorePreset() : FEXCorePreset.INTERMEDIATE);
+        FEXCorePresetManager.loadSpinner(sFEXCorePreset, isEditMode() ? container.getFEXCorePreset() : preferences.getString("fexcore_preset", FEXCorePreset.INTERMEDIATE));
 
         String selectedDriver = sGraphicsDriver.getSelectedItem().toString();
         List<String> sGraphicsItemsList = new ArrayList<>(Arrays.asList(context.getResources().getStringArray(R.array.graphics_driver_entries)));

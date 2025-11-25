@@ -1509,6 +1509,9 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             envVars.put("WRAPPER_VMEM_MAX_SIZE", maxDeviceMemory);
 
         String presentMode = graphicsDriverConfig.get("presentMode");
+        if (presentMode.contains("immediate")) {
+            envVars.put("WRAPPER_MAX_IMAGE_COUNT", "1");
+        }
         envVars.put("MESA_VK_WSI_PRESENT_MODE", presentMode);
 
         String resourceType = graphicsDriverConfig.get("resourceType");
@@ -1529,7 +1532,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             default -> envVars.put("WRAPPER_EMULATE_BCN", "1");
         }
 
-        String bcnEmulationCache = graphicsDriverConfig.get("bcnEmulationType");
+        String bcnEmulationCache = graphicsDriverConfig.get("bcnEmulationCache");
         envVars.put("WRAPPER_USE_BCN_CACHE", bcnEmulationCache);
 
         if (!vkbasaltConfig.isEmpty()) {
