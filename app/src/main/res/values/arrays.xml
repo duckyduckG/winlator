@@ -63,6 +63,9 @@
     <item>1024 MB</item>
     <item>2048 MB</item>
     <item>4096 MB</item>
+    <item>8192 MB</item>
+    <item>12288 MB</item>
+    <item>16384 MB</item>
     </string-array>
     <string-array name="present_mode_entries">
         <item>mailbox</item>
