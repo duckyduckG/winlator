@@ -5,6 +5,8 @@ import android.net.Uri;
 
 import android.content.Context;
 import android.util.Log;
+
+import com.winlator.cmod.SettingsFragment;
 import com.winlator.cmod.container.Container;
 import com.winlator.cmod.container.Shortcut;
 import com.winlator.cmod.container.ContainerManager;
@@ -210,6 +212,7 @@ public class AdrenotoolsManager {
                 envVars.put("ADRENOTOOLS_DRIVER_PATH", driverPath);
                 envVars.put("ADRENOTOOLS_HOOKS_PATH", imagefs.getLibDir());
                 envVars.put("ADRENOTOOLS_DRIVER_NAME", getLibraryName(adrenotoolsDriverId));
+                envVars.put("ADRENOTOOLS_REDIRECT_DIR", SettingsFragment.DEFAULT_WINLATOR_PATH + "/");
             }
         }
     }
